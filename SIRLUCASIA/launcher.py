@@ -1,4 +1,4 @@
-from SIRLUCASIA.app.main import Assistant
+from app.main import Assistant
 
 
 def main():
