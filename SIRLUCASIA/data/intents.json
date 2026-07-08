@@ -18,13 +18,20 @@
             "tag": "despedida",
             "patterns": [
                 "adiós",
+                "adios",
+                "goodbye",
                 "hasta luego",
                 "bye",
-                "chao"
+                "chao",
+                "BYE"
             ],
             "responses": [
-                "Hasta luego 👋",
-                "Nos vemos pronto."
+                "Hasta luego ",
+                "Nos vemos pronto.",
+                "¡Que tengas un buen día!",
+                "¡Cuídate!",
+                "VOLVERE... CON MAS DATOS"
+                
             ]
         }
     ]
