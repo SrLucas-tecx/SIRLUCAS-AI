@@ -1,9 +1,4 @@
-from app.main import Assistant
-
-
-def main():
-    assistant = Assistant()
-    assistant.start()
+from app.main import main
 
 
 if __name__ == "__main__":
