@@ -1,0 +1,12 @@
+{
+    "saludo": [
+        "¡Hola!",
+        "¡Qué gusto verte!",
+        "Hola Juan ;D"
+    ],
+
+    "despedida": [
+        "Hasta luego.",
+        "Nos vemos."
+    ]
+}
