@@ -6,12 +6,24 @@
                 "hola",
                 "buenas",
                 "hi",
-                "hello"
+                "hello",
+                "hey",
+                "HOLA",
+                "hola sir lukis trukis",
+                "ola",
+                "holi",
+                "holis",
+                "holaa",
+                "aloha"
             ],
             "responses": [
                 "¡Hola!",
-                "¿Cómo estás?",
-                "¿En qué puedo ayudarte?"
+                "¿Como estas?",
+                "¿En qué puedo ayudarte?",
+                "¡Hola! ¿Qué tal?",
+                " SIR LUKIS TRUKIS ENTARNDO AL CHAT",
+                "¡Hola! ¿Cómo te va?",
+                "¡Hola! ¿Qué tal tu día?"
             ]
         },
         {
@@ -23,14 +35,22 @@
                 "hasta luego",
                 "bye",
                 "chao",
-                "BYE"
+                "BYE",
+                "nos vemos"
             ],
             "responses": [
                 "Hasta luego ",
                 "Nos vemos pronto.",
                 "¡Que tengas un buen día!",
                 "¡Cuídate!",
-                "VOLVERE... CON MAS DATOS"
+                "VOLVERE... CON MAS DATOS",
+                "¡Adiós! ¡Hasta la próxima!",
+                "Hasta laproxima se despide su amigo Sir Lukis Trukis",
+                "Adios papu",
+                "Te la lavas carnal",
+                "Te esperare mi estimado usuario",
+                "Nos vemos en la proxima"
+            
                 
             ]
         }

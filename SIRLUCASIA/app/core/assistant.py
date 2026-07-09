@@ -1,6 +1,6 @@
 import random
 
-from app.utils.json_manager import JSONManager
+from app.core.intent_manager import IntentManager
 
 
 class Assistant:
@@ -10,7 +10,7 @@ class Assistant:
         self.name = "SIRLUCAS AI"
         self.version = "0.1"
 
-        self.intents = JSONManager.load("data/intents.json")
+        self.intent_manager = IntentManager()
 
     def start(self):
 
@@ -25,7 +25,7 @@ class Assistant:
         print("¡Qué onda!")
         print("Mi nombre es SIRLUCAS AI :)")
 
-        if self.intents:
+        if self.intent_manager.intents:
             print("Intenciones cargadas correctamente")
         else:
             print("Error al cargar las intenciones")
@@ -46,44 +46,21 @@ class Assistant:
                 self.stop()
                 break
 
-            response = self.process_message(message)
+            response = self.intent_manager.process(message)
 
             print(f"\n{self.name} > {response}")
 
-    def process_message(self, message):
-
-        if self.intents is None:
-            return "No pude cargar intents.json."
-
-        message = message.lower()
-
-        for intent in self.intents["intents"]:
-
-            if any(pattern.lower() in message for pattern in intent["patterns"]):
-
-                return random.choice(intent["responses"])
-
-        return "Lo siento, todavía estoy aprendiendo."
-
-    def get_intent_by_tag(self, tag):
-
-        if self.intents is None:
-            return None
-
-        for intent in self.intents["intents"]:
-
-            if intent["tag"] == tag:
-                return intent
-
-        return None
-
     def stop(self):
 
-        despedida = self.get_intent_by_tag("despedida")
+        despedida = self.intent_manager.get_by_tag("despedida")
 
         if despedida:
             print(f"\n{self.name} > {random.choice(despedida['responses'])}")
         else:
             print(f"\n{self.name} > Hasta luego.")
-            
-            
+
+
+if __name__ == "__main__":
+
+    assistant = Assistant()
+    assistant.start()
