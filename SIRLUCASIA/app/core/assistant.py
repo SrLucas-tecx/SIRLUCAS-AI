@@ -1,6 +1,9 @@
 import random
 
+print("ASSISTANT NUEVO CARGADO")
+
 from app.core.intent_manager import IntentManager
+from app.core.memory_manager import MemoryManager
 
 
 class Assistant:
@@ -11,11 +14,15 @@ class Assistant:
         self.version = "0.1"
 
         self.intent_manager = IntentManager()
+        self.memory_manager = MemoryManager()
+
 
     def start(self):
 
         self.show_banner()
         self.chat()
+    def execute_command(self, message):
+            return None  # Placeholder for command execution logic
 
     def show_banner(self):
 
@@ -46,8 +53,10 @@ class Assistant:
                 self.stop()
                 break
 
-            response = self.intent_manager.process(message)
-
+            response = self.execute_command(message)
+            if response is None:
+                response = self.intent_manager.process(message)
+                
             print(f"\n{self.name} > {response}")
 
     def stop(self):
