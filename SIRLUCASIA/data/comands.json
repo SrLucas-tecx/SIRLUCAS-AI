@@ -1,0 +1,14 @@
+{
+    "vscode": {
+        "name": "Visual Studio Code",
+        "path": "C:\\Users\\Juan\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
+    },
+    "notepad": {
+        "name": "Bloc de notas",
+        "path": "C:\\Windows\\System32\\notepad.exe"
+    },
+    "calculator": {
+        "name": "Calculadora",
+        "path": "calc.exe"
+    }
+}

@@ -4,6 +4,7 @@ print("ASSISTANT NUEVO CARGADO")
 
 from app.core.intent_manager import IntentManager
 from app.core.memory_manager import MemoryManager
+from app.core.command_manager import CommandManager
 
 
 class Assistant:
@@ -13,16 +14,15 @@ class Assistant:
         self.name = "SIRLUCAS AI"
         self.version = "0.1"
 
+        # Inicializar los módulos principales
         self.intent_manager = IntentManager()
         self.memory_manager = MemoryManager()
-
+        self.command_manager = CommandManager(self.memory_manager)
 
     def start(self):
 
         self.show_banner()
         self.chat()
-    def execute_command(self, message):
-            return None  # Placeholder for command execution logic
 
     def show_banner(self):
 
@@ -53,10 +53,15 @@ class Assistant:
                 self.stop()
                 break
 
-            response = self.execute_command(message)
+            # Primero intenta ejecutar un comando
+            print(">>> Llamando a CommandManager")
+            response = self.command_manager.execute(message)
+            print(">>> Respuesta:", response)
+            
+            # Si no era un comando, busca una intención
             if response is None:
                 response = self.intent_manager.process(message)
-                
+
             print(f"\n{self.name} > {response}")
 
     def stop(self):
