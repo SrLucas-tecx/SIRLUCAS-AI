@@ -1,0 +1,20 @@
+{
+    "rules": [
+        {
+            "patterns": [
+                "mi nombre es",
+                "me llamo"
+            ],
+            "command": "remember",
+            "key": "nombre"
+        },
+        {
+            "patterns": [
+                "mi edad es",
+                "tengo"
+            ],
+            "command": "remember",
+            "key": "edad"
+        }
+    ]
+}
