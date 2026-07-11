@@ -5,6 +5,9 @@ print("ASSISTANT NUEVO CARGADO")
 from app.core.intent_manager import IntentManager
 from app.core.memory_manager import MemoryManager
 from app.core.command_manager import CommandManager
+from app.modules.parser import Parser
+
+
 
 
 class Assistant:
@@ -19,10 +22,13 @@ class Assistant:
         self.memory_manager = MemoryManager()
         self.command_manager = CommandManager(self.memory_manager)
 
+        self.parser = Parser()
+
     def start(self):
 
         self.show_banner()
         self.chat()
+
 
     def show_banner(self):
 
@@ -44,6 +50,7 @@ class Assistant:
         while True:
 
             message = input("\nTú > ")
+            message = self.parser.parse(message)
 
             if message.lower() in [
                 "salir",
