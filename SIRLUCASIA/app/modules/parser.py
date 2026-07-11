@@ -1,60 +1,71 @@
+#print("ESTE ES MI PARSER")
+
+import re
+from app.utils.json_manager import JSONManager
+
+
 class Parser:
 
     def __init__(self):
 
-        self.rules =[
-            {
-            "patterns": [
-                    "mi nombre es",
-                    "me llamo"
-                ],
-                "command": "remember",
-                "key": "nombre"
-            }
-        ]
-                     
+        # Cargar reglas
+        self.rules = JSONManager.load("app/modules/parser_rules.json")
+
+        print("=" * 50)
+        print("DEBUG PARSER")
+        print("self.rules =", self.rules)
+        print("type =", type(self.rules))
+        print("=" * 50)
+
+        if self.rules is None:
+            self.rules = []
+
+        print(f"[Parser] {len(self.rules)} reglas cargadas.")
+
+    def _apply_rules(self, message, text):
+
+        for rule in self.rules:
+
+            for regex in rule["regex"]:
+
+                match = re.match(regex, text)
+
+                if not match:
+                    continue
+
+                print(f"[Parser] Regla ejecutada: {rule['name']}")
+
+                # Si la regla necesita guardar un valor
+                if "key" in rule:
+
+                    value = ""
+
+                    if match.groups():
+                        value = match.group(1).strip()
+
+                    return (
+                        f"{rule['command']} "
+                        f"{rule['key']} "
+                        f"{value}"
+                    ).strip()
+
+                # Si la regla no necesita valor
+                return rule["command"]
+
+        return None
 
     def parse(self, message):
 
-        text = message.lower().strip()
+        # Limpiar espacios
+        message = message.strip()
+        message = re.sub(r"\s+", " ", message)
 
-        # Guardar nombre
-        if text.startswith("mi nombre es "):
+        # Texto para comparar
+        text = message.lower()
 
-            for rule in self.rules:
-                for pattern in rule["patterns"]:
+        command = self._apply_rules(message, text)
 
-                 if text.startswith(pattern):
+        if command:
+            return command
 
-                  value = message[len(pattern):].strip()
-
-                  return (
-                     f"{rule['command']} "
-                     f"{rule['key']} "
-                     f"{value}"
-                )
-            return message
-            #value = message[13:].strip()
-
-            #return f"remember nombre {value}"
-            
-
-        if text.startswith("me llamo "):
-
-            value = message[9:].strip()
-
-            return f"remember nombre {value}"
-
-        # Recuperar nombre
-        if text in [
-            "como me llamo",
-            "cómo me llamo",
-            "¿como me llamo?",
-            "¿cómo me llamo?"
-        ]:
-
-            return "recall nombre"
-
-        # Si no encontró ninguna regla,
-        # devuelve el mensaje original.
         return message
