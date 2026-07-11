@@ -53,18 +53,6 @@ class JSONManager:
             return False
         
     @staticmethod
-    def save(path, data):
-        try:
-            with open(path, "w", encoding="utf-8") as file:
-                json.dump(data, file, indent=4, ensure_ascii=False)
-
-            return True
-
-        except Exception as e:
-            print(f"Error al guardar '{path}': {e}")
-            return False
-        
-    @staticmethod
     def exists(path):
        try:
         with open(path, "r"):

@@ -1,0 +1,24 @@
+[
+    {
+        "name": "guardar_nombre",
+        "priority": 1,
+        "regex": [
+            "^mi nombre es (.+)$",
+            "^me llamo (.+)$"
+        ],
+        "command": "remember",
+        "key": "nombre"
+    },
+    {
+        "name": "recordar_nombre",
+        "priority": 2,
+        "regex": [
+            "^como me llamo$",
+            "^cómo me llamo$",
+            "^¿como me llamo\\?$",
+            "^¿cómo me llamo\\?$"
+        ],
+        "command": "recall",
+        "key": "nombre"
+    }
+]
