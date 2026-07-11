@@ -2,12 +2,17 @@ class Parser:
 
     def __init__(self):
 
-        self.rules = {
-            "mi nombre es": "remember nombre",
-            "me llamo": "remember nombre",
-            "como me llamo": "recall nombre",
-            "cómo me llamo": "recall nombre"
-        }
+        self.rules =[
+            {
+            "patterns": [
+                    "mi nombre es",
+                    "me llamo"
+                ],
+                "command": "remember",
+                "key": "nombre"
+            }
+        ]
+                     
 
     def parse(self, message):
 
@@ -16,9 +21,23 @@ class Parser:
         # Guardar nombre
         if text.startswith("mi nombre es "):
 
-            value = message[13:].strip()
+            for rule in self.rules:
+                for pattern in rule["patterns"]:
 
-            return f"remember nombre {value}"
+                 if text.startswith(pattern):
+
+                  value = message[len(pattern):].strip()
+
+                  return (
+                     f"{rule['command']} "
+                     f"{rule['key']} "
+                     f"{value}"
+                )
+            return message
+            #value = message[13:].strip()
+
+            #return f"remember nombre {value}"
+            
 
         if text.startswith("me llamo "):
 
