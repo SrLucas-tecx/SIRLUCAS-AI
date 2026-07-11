@@ -17,6 +17,7 @@ class CommandManager:
 
         if command == "remember":
             return self.remember(parts)
+
         if command == "recall":
             return self.recall(parts)
 
@@ -24,23 +25,29 @@ class CommandManager:
 
     def remember(self, parts):
 
-        if len(parts) < 2:
+        if len(parts) < 3:
             return "Uso: remember <clave> <valor>"
 
         key = parts[1]
+        value = " ".join(parts[2:])
 
-        value = self .memory.recall(key)
-        #------------------------------------------------------------#
-        #nesesito checar esto
-        #------------------------------------------------------------#
-
-        if value is None:
-            return f"No lo recuerdo '{key}'."
-        
-        return f"{key} = [value]"
-    
         print(f"Guardando: {key} = {value}")
 
         self.memory.remember(key, value)
 
         return f"Lo recordaré. ({key} = {value})"
+
+    def recall(self, parts):
+
+        if len(parts) < 2:
+            return "Uso: recall <clave>"
+
+        key = parts[1]
+
+        value = self.memory.recall(key)
+
+        if value is None:
+            return f"No recuerdo '{key}'."
+
+        return f"{key} = {value}"
+    
