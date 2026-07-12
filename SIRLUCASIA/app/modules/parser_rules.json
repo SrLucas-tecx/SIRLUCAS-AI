@@ -1,6 +1,7 @@
 [
     {
         "name": "guardar_nombre",
+        "module": "memory",
         "priority": 1,
         "regex": [
             "^mi nombre es (.+)$",
@@ -10,9 +11,9 @@
         "command": "remember",
         "key": "nombre"
     },
-
     {
         "name": "recordar_nombre",
+        "module": "memory",
         "priority": 2,
         "regex": [
             "^como me llamo$",
@@ -22,14 +23,16 @@
             "^quien soy$",
             "^quién soy$",
             "^cual es mi nombre$",
-            "^cuál es mi nombre$"
+            "^cuál es mi nombre$",
+            "^¿cual es mi nombre\\??$",
+            "^¿cuál es mi nombre\\??$"
         ],
         "command": "recall",
         "key": "nombre"
     },
-
     {
         "name": "guardar_edad",
+        "module": "memory",
         "priority": 1,
         "regex": [
             "^tengo (\\d+) años$",
@@ -38,9 +41,9 @@
         "command": "remember",
         "key": "edad"
     },
-
     {
         "name": "recordar_edad",
+        "module": "memory",
         "priority": 2,
         "regex": [
             "^cuantos años tengo$",
@@ -51,9 +54,9 @@
         "command": "recall",
         "key": "edad"
     },
-
     {
         "name": "guardar_ciudad",
+        "module": "memory",
         "priority": 1,
         "regex": [
             "^vivo en (.+)$"
@@ -61,9 +64,9 @@
         "command": "remember",
         "key": "ciudad"
     },
-
     {
         "name": "recordar_ciudad",
+        "module": "memory",
         "priority": 2,
         "regex": [
             "^donde vivo$",
@@ -74,9 +77,9 @@
         "command": "recall",
         "key": "ciudad"
     },
-
     {
         "name": "guardar_profesion",
+        "module": "memory",
         "priority": 1,
         "regex": [
             "^soy (.+)$",
@@ -85,9 +88,9 @@
         "command": "remember",
         "key": "profesion"
     },
-
     {
         "name": "recordar_profesion",
+        "module": "memory",
         "priority": 2,
         "regex": [
             "^que soy$",
