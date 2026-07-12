@@ -6,6 +6,8 @@ from app.core.intent_manager import IntentManager
 from app.core.memory_manager import MemoryManager
 from app.core.command_manager import CommandManager
 from app.modules.parser import Parser
+from app.core.router import Router
+
 
 
 
@@ -16,11 +18,21 @@ class Assistant:
 
         self.name = "SIRLUCAS AI"
         self.version = "0.1"
+        
 
         # Inicializar los módulos principales
         self.intent_manager = IntentManager()
         self.memory_manager = MemoryManager()
         self.command_manager = CommandManager(self.memory_manager)
+
+        # Inicializar Router
+        self.router = Router()
+
+        # Registrar módulos
+        self.router.register(
+            "memory",
+            self.command_manager
+        )
 
         self.parser = Parser()
 
@@ -79,7 +91,6 @@ class Assistant:
             print(f"\n{self.name} > {random.choice(despedida['responses'])}")
         else:
             print(f"\n{self.name} > Hasta luego.")
-
 
 if __name__ == "__main__":
 

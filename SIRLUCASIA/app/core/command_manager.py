@@ -37,13 +37,33 @@ class CommandManager:
             }
         }
 
-    def execute(self, message):
+    def execute(self, data):
 
-        print(f"Ejecutando comando: {message}")
+        print(f"Ejecutando comando: {data}")
 
-        parts = message.split()
+         # ==========================
+         # NUEVO SISTEMA (dict)
+         # ==========================
 
-        if len(parts) == 0:
+        if isinstance(data, dict):
+
+            command = data.get("command")
+
+            handler = self.commands.get(command)
+
+            if handler:
+                return handler(data)
+            return None
+
+        # ==========================
+        # SISTEMA ANTIGUO (string)
+        # ==========================
+        
+        if isinstance(data, str):
+
+           parts = data.split()
+
+           if len(parts) == 0:
             return None
 
         command = parts[0].lower()
@@ -54,20 +74,23 @@ class CommandManager:
             return handler(parts)
 
         return None
+    
+    def remember(self, data):
+        #Nuevo sistema 
+        if isinstance(data,dict):
 
-    def remember(self, parts):
+            key = data["key"]
+            value = data["value"]
+        else:
 
-        if len(parts) < 3:
-            return "Uso: remember <clave> <valor>"
+            if lend(data)< 3:
+                return "Uso:remmeber <clave> <valor>"
+        print(f"Guardando: {key}={value}")
 
-        key = parts[1]
-        value = " ".join(parts[2:])
+        self.memory.remember(key,value)
 
-        print(f"Guardando: {key} = {value}")
-
-        self.memory.remember(key, value)
-
-        return f"Lo recordaré. ({key} = {value})"
+        return f"lo recordare.({key}={value})"
+    
 
     def recall(self, parts):
 
@@ -82,6 +105,7 @@ class CommandManager:
             return f"No recuerdo '{key}'."
 
         return f"{key} = {value}"
+    
 
     def forget(self, parts):
 
