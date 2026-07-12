@@ -83,13 +83,13 @@ class CommandManager:
             value = data["value"]
         else:
 
-            if lend(data)< 3:
+        #    if lend(data)< 3:
                 return "Uso:remmeber <clave> <valor>"
-        print(f"Guardando: {key}={value}")
+        #print(f"Guardando: {key}={value}")
 
-        self.memory.remember(key,value)
+        #self.memory.remember(key,value)
 
-        return f"lo recordare.({key}={value})"
+        #return f"lo recordare.({key}={value})"
     
 
     def recall(self, parts):
