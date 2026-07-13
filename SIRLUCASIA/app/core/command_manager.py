@@ -4,7 +4,7 @@ class CommandManager:
 
         self.memory = memory_manager
 
-        # Comandos ejecutables
+        # Comandos disponibles
         self.commands = {
             "remember": self.remember,
             "recall": self.recall,
@@ -41,10 +41,9 @@ class CommandManager:
 
         print(f"Ejecutando comando: {data}")
 
-         # ==========================
-         # NUEVO SISTEMA (dict)
-         # ==========================
-
+        # ==========================
+        # NUEVO SISTEMA (dict)
+        # ==========================
         if isinstance(data, dict):
 
             command = data.get("command")
@@ -53,51 +52,63 @@ class CommandManager:
 
             if handler:
                 return handler(data)
+
             return None
 
         # ==========================
         # SISTEMA ANTIGUO (string)
         # ==========================
-        
         if isinstance(data, str):
 
-           parts = data.split()
+            parts = data.split()
 
-           if len(parts) == 0:
+            if len(parts) == 0:
+                return None
+
+            command = parts[0].lower()
+
+            handler = self.commands.get(command)
+
+            if handler:
+                return handler(parts)
+
             return None
 
-        command = parts[0].lower()
-
-        handler = self.commands.get(command)
-
-        if handler:
-            return handler(parts)
-
         return None
-    
+
     def remember(self, data):
-        #Nuevo sistema 
-        if isinstance(data,dict):
+
+        if isinstance(data, dict):
 
             key = data["key"]
             value = data["value"]
+
         else:
 
-        #    if lend(data)< 3:
-                return "Uso:remmeber <clave> <valor>"
-        #print(f"Guardando: {key}={value}")
+            if len(data) < 3:
+                return "Uso: remember <clave> <valor>"
 
-        #self.memory.remember(key,value)
+            key = data[1]
+            value = " ".join(data[2:])
 
-        #return f"lo recordare.({key}={value})"
-    
+        print(f"Guardando: {key} = {value}")
 
-    def recall(self, parts):
+        self.memory.remember(key, value)
 
-        if len(parts) < 2:
-            return "Uso: recall <clave>"
+        return f"Lo recordaré. ({key} = {value})"
 
-        key = parts[1]
+    def recall(self, data):
+
+        if isinstance(data, dict):
+
+            key = data["key"]
+
+        else:
+
+            if len(data) < 2:
+                return "Uso: recall <clave>"
+
+            key = data[1]
 
         value = self.memory.recall(key)
 
@@ -105,21 +116,26 @@ class CommandManager:
             return f"No recuerdo '{key}'."
 
         return f"{key} = {value}"
-    
 
-    def forget(self, parts):
+    def forget(self, data):
 
-        if len(parts) < 2:
-            return "Uso: forget <clave>"
+        if isinstance(data, dict):
 
-        key = parts[1]
+            key = data["key"]
+
+        else:
+
+            if len(data) < 2:
+                return "Uso: forget <clave>"
+
+            key = data[1]
 
         if self.memory.forget(key):
             return f"He olvidado '{key}'."
 
         return f"No encontré '{key}' en mi memoria."
 
-    def list_memories(self, parts):
+    def list_memories(self, data=None):
 
         memories = self.memory.list_memories()
 
@@ -133,7 +149,7 @@ class CommandManager:
 
         return response
 
-    def help(self, parts):
+    def help(self, data=None):
 
         response = (
             "\n"

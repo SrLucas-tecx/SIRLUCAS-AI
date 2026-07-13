@@ -8,12 +8,15 @@ class Router:
 
         self.modules[name] = module
 
-    def dispatch(self, module_name, command):
+    def route(self, data):
+
+        module_name = data.get("module")
 
         module = self.modules.get(module_name)
 
         if module is None:
+            print(f"[Router] No existe el módulo '{module_name}'.")
             return None
 
-        return module.execute(command)
+        return module.execute(data)
     
