@@ -9,7 +9,7 @@ from app.modules.parser import Parser
 from app.core.router import Router
 from app.core.context_manager import ContextManager
 from app.core.knowledge_manager import KnowledgeManager
-
+from app.core.web_manager import WebManager
 
 
 class Assistant:
@@ -31,7 +31,8 @@ class Assistant:
         self.command_manager = CommandManager(self.memory_manager)
         self.context = ContextManager()
         self.knowledge = KnowledgeManager()
-        
+        self.web = WebManager()
+
         #print(self.knowledge.search("python"))
         #print(self.knowledge.search("python"))
         #print(self.knowledge.search("linux"))
@@ -51,6 +52,9 @@ class Assistant:
             "knowledge",
             self.knowledge)
         
+        self.router.register(
+            "web",
+            self.web)
 
         # ==========================
         # Parser

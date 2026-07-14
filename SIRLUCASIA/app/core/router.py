@@ -5,6 +5,7 @@ class Router:
         self.modules = {}
 
     def register(self, name, module):
+        name=name.lower()
 
         self.modules[name] = module
 
@@ -15,7 +16,8 @@ class Router:
         if not isinstance(data, dict):
             return None
 
-        module_name = data.get("module")
+        module_name = data.get("module","").lower()
+        
 
         if module_name is None:
             print("[Router] El comando no especifica un módulo.")

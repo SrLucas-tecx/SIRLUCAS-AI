@@ -106,12 +106,24 @@
         "key": "profesion"
     },
     {
-    "name": "buscar_conocimiento",
-    "module": "knowledge",
-    "priority": 5,
-    "regex": [
-        "^que es (.+)$",
-        "^qué es (.+)$"
+        "name": "buscar_conocimiento",
+        "module": "knowledge",
+        "priority": 5,
+        "regex": [
+           "^que es (.+)$",
+           "^qué es (.+)$"
+    ],
+     "command": "search",
+     "topic_group": 1
+   },
+   {
+       "name": "buscar_web",
+       "module": "web",
+       "priority": 20,
+       "regex": [
+         "^busca (.+)$",
+         "^buscar (.+)$",
+         "^investiga (.+)$"
     ],
     "command": "search",
     "topic_group": 1
