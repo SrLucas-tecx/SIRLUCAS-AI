@@ -1,0 +1,14 @@
+[
+    {
+        "topic": "python",
+        "answer": "Python es un lenguaje de programación de alto nivel creado por Guido van Rossum."
+    },
+    {
+        "topic": "ia",
+        "answer": "La Inteligencia Artificial permite que las computadoras aprendan y tomen decisiones."
+    },
+    {
+        "topic": "linux",
+        "answer": "Linux es un sistema operativo de código abierto creado por Linus Torvalds."
+    }
+]
