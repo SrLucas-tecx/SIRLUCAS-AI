@@ -105,15 +105,159 @@
         "command": "recall",
         "key": "profesion"
     },
-    {
-    "name": "buscar_conocimiento",
-    "module": "knowledge",
-    "priority": 5,
-    "regex": [
-        "^que es (.+)$",
-        "^qué es (.+)$"
+    
+     {
+       "name": "buscar_conocimiento",
+       "module": "knowledge",
+       "priority": 5,
+       "regex": [
+         "^que es (.+)$",
+         "^quien es (.+)$",
+         "^qué es (.+)$",
+         "^quién es (.+)$",
+         "^definicion de (.+)$",
+         "^definición de (.+)$",
+         "^explicame (.+)$",
+         "^explícame (.+)$",
+         "^hablame de (.+)$",
+          "^háblame de (.+)$"
     ],
     "command": "search",
     "topic_group": 1
+},
+{
+    "name":"buscar_web",
+    "module":"web",
+    "priority":20,
+    "regex":[
+        "^busca (.+)$",
+        "^buscar (.+)$",
+        "^investiga (.+)$"
+    ],
+    "command":"search",
+    "topic_group":1
+},
+{
+    "name":"crear_documento",
+    "module":"document",
+    "priority":20,
+    "regex":[
+        "^crea un documento (.+)$",
+        "^crear documento (.+)$"
+    ],
+    "command":"create",
+    "topic_group":1
+},
+{
+    "name":"abrir_app",
+    "module":"system",
+    "priority":20,
+    "regex":[
+        "^abre (.+)$",
+        "^ejecuta (.+)$",
+        "^inicia (.+)$"
+    ],
+    "command":"open",
+    "topic_group":1
+},
+{
+    "name":"buscar_web",
+    "module":"web",
+    "priority":20,
+    "regex":[
+        "^busca (.+)$",
+        "^buscar (.+)$",
+        "^investiga (.+)$",
+        "^consulta (.+)$",
+        "^busca en internet (.+)$",
+        "^investiga en internet (.+)$"
+    ],
+    "command":"search",
+    "topic_group":1
+},
+{
+    "name":"crear_documento",
+    "module":"document",
+    "priority":15,
+    "regex":[
+        "^crea un documento (.+)$",
+        "^crear documento (.+)$",
+        "^haz un documento (.+)$",
+        "^genera un documento (.+)$"
+    ],
+    "command":"create",
+    "topic_group":1
+},
+{
+    "name":"abrir_app",
+    "module":"system",
+    "priority":10,
+    "regex":[
+        "^abre (.+)$",
+        "^ejecuta (.+)$",
+        "^inicia (.+)$",
+        "^abre la aplicacion (.+)$",
+        "^abre el programa (.+)$"
+    ],
+    "command":"open",
+    "topic_group":1
+},
+{
+    "name":"cerrar_app",
+    "module":"system",
+    "priority":10,
+    "regex":[
+        "^cierra (.+)$",
+        "^termina (.+)$",
+        "^finaliza (.+)$"
+    ],
+    "command":"close",
+    "topic_group":1
+},
+{
+    "name":"calcular",
+    "module":"calculator",
+    "priority":8,
+    "regex":[
+        "^cuanto es (.+)$",
+        "^calcula (.+)$",
+        "^resolver (.+)$"
+    ],
+    "command":"calculate",
+    "topic_group":1
+},
+{
+    "name":"hora",
+    "module":"system",
+    "priority":8,
+    "regex":[
+        "^que hora es$",
+        "^qué hora es$"
+    ],
+    "command":"time"
+},
+{
+    "name":"fecha",
+    "module":"system",
+    "priority":8,
+    "regex":[
+        "^que fecha es hoy$",
+        "^qué fecha es hoy$",
+        "^fecha de hoy$"
+    ],
+    "command":"date"
+},
+{
+    "name":"clima",
+    "module":"weather",
+    "priority":20,
+    "regex":[
+        "^como esta el clima$",
+        "^cómo está el clima$",
+        "^clima en (.+)$"
+    ],
+    "command":"weather",
+    "topic_group":1
 }
+
 ]
