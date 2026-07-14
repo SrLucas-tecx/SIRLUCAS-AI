@@ -1,285 +1,226 @@
 [
-    {
-        "name": "guardar_nombre",
-        "module": "memory",
-        "priority": 1,
-        "regex": [
-            "^mi nombre es (.+)$",
-            "^me llamo (.+)$",
-            "^puedes llamarme (.+)$"
-        ],
-        "command": "remember",
-        "key": "nombre"
-    },
-    {
-        "name": "recordar_nombre",
-        "module": "memory",
-        "priority": 2,
-        "regex": [
-            "^como me llamo$",
-            "^cómo me llamo$",
-            "^¿como me llamo\\??$",
-            "^¿cómo me llamo\\??$",
-            "^quien soy$",
-            "^quién soy$",
-            "^cual es mi nombre$",
-            "^cuál es mi nombre$",
-            "^¿cual es mi nombre\\??$",
-            "^¿cuál es mi nombre\\??$"
-        ],
-        "command": "recall",
-        "key": "nombre"
-    },
-    {
-        "name": "guardar_edad",
-        "module": "memory",
-        "priority": 1,
-        "regex": [
-            "^tengo (\\d+) años$",
-            "^tengo (\\d+)$"
-        ],
-        "command": "remember",
-        "key": "edad"
-    },
-    {
-        "name": "recordar_edad",
-        "module": "memory",
-        "priority": 2,
-        "regex": [
-            "^cuantos años tengo$",
-            "^cuántos años tengo$",
-            "^¿cuantos años tengo\\??$",
-            "^¿cuántos años tengo\\??$"
-        ],
-        "command": "recall",
-        "key": "edad"
-    },
-    {
-        "name": "guardar_ciudad",
-        "module": "memory",
-        "priority": 1,
-        "regex": [
-            "^vivo en (.+)$"
-        ],
-        "command": "remember",
-        "key": "ciudad"
-    },
-    {
-        "name": "recordar_ciudad",
-        "module": "memory",
-        "priority": 2,
-        "regex": [
-            "^donde vivo$",
-            "^dónde vivo$",
-            "^¿donde vivo\\??$",
-            "^¿dónde vivo\\??$"
-        ],
-        "command": "recall",
-        "key": "ciudad"
-    },
-    {
-        "name": "guardar_profesion",
-        "module": "memory",
-        "priority": 1,
-        "regex": [
-            "^soy (.+)$",
-            "^trabajo como (.+)$"
-        ],
-        "command": "remember",
-        "key": "profesion"
-    },
-    {
-        "name": "recordar_profesion",
-        "module": "memory",
-        "priority": 2,
-        "regex": [
-            "^que soy$",
-            "^qué soy$",
-            "^¿que soy\\??$",
-            "^¿qué soy\\??$",
-            "^cual es mi profesion$",
-            "^cuál es mi profesión$",
-            "^¿cual es mi profesion\\??$",
-            "^¿cuál es mi profesión\\??$"
-        ],
-        "command": "recall",
-        "key": "profesion"
-    },
-<<<<<<< HEAD
-    {
-        "name": "buscar_conocimiento",
-        "module": "knowledge",
-        "priority": 5,
-        "regex": [
-           "^que es (.+)$",
-           "^qué es (.+)$"
+  {
+    "name": "guardar_nombre",
+    "module": "memory",
+    "priority": 1,
+    "regex": [
+      "^mi nombre es (.+)$",
+      "^me llamo (.+)$",
+      "^puedes llamarme (.+)$"
     ],
-     "command": "search",
-     "topic_group": 1
-   },
-   {
-       "name": "buscar_web",
-       "module": "web",
-       "priority": 20,
-       "regex": [
-         "^busca (.+)$",
-         "^buscar (.+)$",
-         "^investiga (.+)$"
-=======
-    
-     {
-       "name": "buscar_conocimiento",
-       "module": "knowledge",
-       "priority": 5,
-       "regex": [
-         "^que es (.+)$",
-         "^quien es (.+)$",
-         "^qué es (.+)$",
-         "^quién es (.+)$",
-         "^definicion de (.+)$",
-         "^definición de (.+)$",
-         "^explicame (.+)$",
-         "^explícame (.+)$",
-         "^hablame de (.+)$",
-          "^háblame de (.+)$"
->>>>>>> b7ef92ad2daeaeee529d9a391f2f79d620704548
+    "command": "remember",
+    "key": "nombre"
+  },
+  {
+    "name": "recordar_nombre",
+    "module": "memory",
+    "priority": 2,
+    "regex": [
+      "^como me llamo$",
+      "^cómo me llamo$",
+      "^¿como me llamo\\??$",
+      "^¿cómo me llamo\\??$",
+      "^quien soy$",
+      "^quién soy$",
+      "^cual es mi nombre$",
+      "^cuál es mi nombre$",
+      "^¿cual es mi nombre\\??$",
+      "^¿cuál es mi nombre\\??$"
+    ],
+    "command": "recall",
+    "key": "nombre"
+  },
+  {
+    "name": "guardar_edad",
+    "module": "memory",
+    "priority": 1,
+    "regex": [
+      "^tengo (\\d+) años$",
+      "^tengo (\\d+)$"
+    ],
+    "command": "remember",
+    "key": "edad"
+  },
+  {
+    "name": "recordar_edad",
+    "module": "memory",
+    "priority": 2,
+    "regex": [
+      "^cuantos años tengo$",
+      "^cuántos años tengo$",
+      "^¿cuantos años tengo\\??$",
+      "^¿cuántos años tengo\\??$"
+    ],
+    "command": "recall",
+    "key": "edad"
+  },
+  {
+    "name": "guardar_ciudad",
+    "module": "memory",
+    "priority": 1,
+    "regex": [
+      "^vivo en (.+)$"
+    ],
+    "command": "remember",
+    "key": "ciudad"
+  },
+  {
+    "name": "recordar_ciudad",
+    "module": "memory",
+    "priority": 2,
+    "regex": [
+      "^donde vivo$",
+      "^dónde vivo$",
+      "^¿donde vivo\\??$",
+      "^¿dónde vivo\\??$"
+    ],
+    "command": "recall",
+    "key": "ciudad"
+  },
+  {
+    "name": "guardar_profesion",
+    "module": "memory",
+    "priority": 1,
+    "regex": [
+      "^soy (.+)$",
+      "^trabajo como (.+)$"
+    ],
+    "command": "remember",
+    "key": "profesion"
+  },
+  {
+    "name": "recordar_profesion",
+    "module": "memory",
+    "priority": 2,
+    "regex": [
+      "^que soy$",
+      "^qué soy$",
+      "^¿que soy\\??$",
+      "^¿qué soy\\??$",
+      "^cual es mi profesion$",
+      "^cuál es mi profesión$",
+      "^¿cual es mi profesion\\??$",
+      "^¿cuál es mi profesión\\??$"
+    ],
+    "command": "recall",
+    "key": "profesion"
+  },
+  {
+    "name": "buscar_conocimiento",
+    "module": "knowledge",
+    "priority": 5,
+    "regex": [
+      "^que es (.+)$",
+      "^quien es (.+)$",
+      "^qué es (.+)$",
+      "^quién es (.+)$",
+      "^definicion de (.+)$",
+      "^definición de (.+)$",
+      "^explicame (.+)$",
+      "^explícame (.+)$",
+      "^hablame de (.+)$",
+      "^háblame de (.+)$"
     ],
     "command": "search",
     "topic_group": 1
-},
-{
-    "name":"buscar_web",
-    "module":"web",
-    "priority":20,
-    "regex":[
-        "^busca (.+)$",
-        "^buscar (.+)$",
-        "^investiga (.+)$"
+  },
+  {
+    "name": "buscar_web",
+    "module": "web",
+    "priority": 20,
+    "regex": [
+      "^busca (.+)$",
+      "^buscar (.+)$",
+      "^investiga (.+)$",
+      "^consulta (.+)$",
+      "^busca en internet (.+)$",
+      "^investiga en internet (.+)$"
     ],
-    "command":"search",
-    "topic_group":1
-},
-{
-    "name":"crear_documento",
-    "module":"document",
-    "priority":20,
-    "regex":[
-        "^crea un documento (.+)$",
-        "^crear documento (.+)$"
+    "command": "search",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_documento",
+    "module": "document",
+    "priority": 15,
+    "regex": [
+      "^crea un documento (.+)$",
+      "^crear documento (.+)$",
+      "^haz un documento (.+)$",
+      "^genera un documento (.+)$"
     ],
-    "command":"create",
-    "topic_group":1
-},
-{
-    "name":"abrir_app",
-    "module":"system",
-    "priority":20,
-    "regex":[
-        "^abre (.+)$",
-        "^ejecuta (.+)$",
-        "^inicia (.+)$"
+    "command": "create",
+    "topic_group": 1
+  },
+  {
+    "name": "abrir_app",
+    "module": "system",
+    "priority": 10,
+    "regex": [
+      "^abre (.+)$",
+      "^ejecuta (.+)$",
+      "^inicia (.+)$",
+      "^abre la aplicacion (.+)$",
+      "^abre el programa (.+)$"
     ],
-    "command":"open",
-    "topic_group":1
-},
-{
-    "name":"buscar_web",
-    "module":"web",
-    "priority":20,
-    "regex":[
-        "^busca (.+)$",
-        "^buscar (.+)$",
-        "^investiga (.+)$",
-        "^consulta (.+)$",
-        "^busca en internet (.+)$",
-        "^investiga en internet (.+)$"
+    "command": "open",
+    "topic_group": 1
+  },
+  {
+    "name": "cerrar_app",
+    "module": "system",
+    "priority": 10,
+    "regex": [
+      "^cierra (.+)$",
+      "^termina (.+)$",
+      "^finaliza (.+)$"
     ],
-    "command":"search",
-    "topic_group":1
-},
-{
-    "name":"crear_documento",
-    "module":"document",
-    "priority":15,
-    "regex":[
-        "^crea un documento (.+)$",
-        "^crear documento (.+)$",
-        "^haz un documento (.+)$",
-        "^genera un documento (.+)$"
+    "command": "close",
+    "topic_group": 1
+  },
+  {
+    "name": "calcular",
+    "module": "calculator",
+    "priority": 8,
+    "regex": [
+      "^cuanto es (.+)$",
+      "^calcula (.+)$",
+      "^resolver (.+)$"
     ],
-    "command":"create",
-    "topic_group":1
-},
-{
-    "name":"abrir_app",
-    "module":"system",
-    "priority":10,
-    "regex":[
-        "^abre (.+)$",
-        "^ejecuta (.+)$",
-        "^inicia (.+)$",
-        "^abre la aplicacion (.+)$",
-        "^abre el programa (.+)$"
+    "command": "calculate",
+    "topic_group": 1
+  },
+  {
+    "name": "hora",
+    "module": "system",
+    "priority": 8,
+    "regex": [
+      "^que hora es$",
+      "^qué hora es$"
     ],
-    "command":"open",
-    "topic_group":1
-},
-{
-    "name":"cerrar_app",
-    "module":"system",
-    "priority":10,
-    "regex":[
-        "^cierra (.+)$",
-        "^termina (.+)$",
-        "^finaliza (.+)$"
+    "command": "time"
+  },
+  {
+    "name": "fecha",
+    "module": "system",
+    "priority": 8,
+    "regex": [
+      "^que fecha es hoy$",
+      "^qué fecha es hoy$",
+      "^fecha de hoy$"
     ],
-    "command":"close",
-    "topic_group":1
-},
-{
-    "name":"calcular",
-    "module":"calculator",
-    "priority":8,
-    "regex":[
-        "^cuanto es (.+)$",
-        "^calcula (.+)$",
-        "^resolver (.+)$"
+    "command": "date"
+  },
+  {
+    "name": "clima",
+    "module": "weather",
+    "priority": 20,
+    "regex": [
+      "^como esta el clima$",
+      "^cómo está el clima$",
+      "^clima en (.+)$"
     ],
-    "command":"calculate",
-    "topic_group":1
-},
-{
-    "name":"hora",
-    "module":"system",
-    "priority":8,
-    "regex":[
-        "^que hora es$",
-        "^qué hora es$"
-    ],
-    "command":"time"
-},
-{
-    "name":"fecha",
-    "module":"system",
-    "priority":8,
-    "regex":[
-        "^que fecha es hoy$",
-        "^qué fecha es hoy$",
-        "^fecha de hoy$"
-    ],
-    "command":"date"
-},
-{
-    "name":"clima",
-    "module":"weather",
-    "priority":20,
-    "regex":[
-        "^como esta el clima$",
-        "^cómo está el clima$",
-        "^clima en (.+)$"
-    ],
-    "command":"weather",
-    "topic_group":1
-}
-
+    "command": "weather",
+    "topic_group": 1
+  }
 ]
