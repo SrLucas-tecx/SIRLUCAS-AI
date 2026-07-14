@@ -8,9 +8,18 @@ class Router:
 
         self.modules[name] = module
 
+        print(f"[Router] Módulo registrado -> {name}")
+
     def route(self, data):
 
+        if not isinstance(data, dict):
+            return None
+
         module_name = data.get("module")
+
+        if module_name is None:
+            print("[Router] El comando no especifica un módulo.")
+            return None
 
         module = self.modules.get(module_name)
 
@@ -19,4 +28,3 @@ class Router:
             return None
 
         return module.execute(data)
-    

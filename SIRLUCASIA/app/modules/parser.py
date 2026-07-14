@@ -7,10 +7,8 @@ class Parser:
 
     def __init__(self):
 
-        # Normalizador
         self.normalizer = Normalizer()
 
-        # Cargar reglas
         self.rules = JSONManager.load(
             "app/modules/parser_rules.json"
         )
@@ -18,28 +16,33 @@ class Parser:
         if self.rules is None:
             self.rules = []
 
-        # Inicializar RuleEngine
         self.rule_engine = RuleEngine(self.rules)
 
         print("=" * 50)
         print(f"[Parser] {len(self.rules)} reglas cargadas.")
         print("=" * 50)
 
+        print("\n===== REGLAS CARGADAS =====")
+
+        for rule in self.rules:
+            print(f"- {rule['name']}")
+
+        print("===========================\n")
+
     def parse(self, message):
 
-        # Normalizar el mensaje
         text = self.normalizer.normalize(message)
 
-        # Buscar una regla
-        command = self.rule_engine.match(text)
+        print(f"[Normalizer] -> {text}")
 
-        if command:
+        result = self.rule_engine.match(text)
 
-            print(
-                f"[Parser] Regla ejecutada: {command['rule']}"
-            )
+        print(f"[RuleEngine] -> {result}")
 
-            return command
+        if result:
 
-        # No hubo coincidencias
+            print(f"[Parser] Regla ejecutada: {result['rule']}")
+
+            return result
+
         return message

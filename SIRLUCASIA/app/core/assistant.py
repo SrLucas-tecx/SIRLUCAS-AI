@@ -8,6 +8,8 @@ from app.core.command_manager import CommandManager
 from app.modules.parser import Parser
 from app.core.router import Router
 from app.core.context_manager import ContextManager
+from app.core.knowledge_manager import KnowledgeManager
+
 
 
 class Assistant:
@@ -17,23 +19,43 @@ class Assistant:
         self.name = "SIRLUCAS AI"
         self.version = "0.1"
 
+        # Modo depuración
+        self.debug = True
+
+        # ==========================
         # Módulos principales
+        # ==========================
+
         self.intent_manager = IntentManager()
         self.memory_manager = MemoryManager()
         self.command_manager = CommandManager(self.memory_manager)
-
-        # Contexto de conversación
         self.context = ContextManager()
+        self.knowledge = KnowledgeManager()
+        
+        #print(self.knowledge.search("python"))
+        #print(self.knowledge.search("python"))
+        #print(self.knowledge.search("linux"))
+        #print(self.knowledge.search("ia"))
 
+        # ==========================
         # Router
+        # ==========================
+
         self.router = Router()
 
         self.router.register(
             "memory",
             self.command_manager
         )
+        self.router.register(
+            "knowledge",
+            self.knowledge)
+        
 
+        # ==========================
         # Parser
+        # ==========================
+
         self.parser = Parser()
 
     def start(self):
@@ -43,9 +65,9 @@ class Assistant:
 
     def show_banner(self):
 
-        print("=" * 50)
-        print(f"{self.name} - Versión {self.version}")
-        print("=" * 50)
+        print("=" * 60)
+        print(f"{self.name} | Versión {self.version}")
+        print("=" * 60)
         print("¡Qué onda!")
         print("Mi nombre es SIRLUCAS AI :)")
 
@@ -54,7 +76,7 @@ class Assistant:
         else:
             print("Error al cargar las intenciones")
 
-        print("=" * 50)
+        print("=" * 60)
 
     def chat(self):
 
@@ -62,7 +84,10 @@ class Assistant:
 
             raw_message = input("\nTú > ")
 
+            # ==========================
             # Salir
+            # ==========================
+
             if raw_message.lower() in [
                 "salir",
                 "exit",
@@ -71,23 +96,36 @@ class Assistant:
                 self.stop()
                 break
 
+            # ==========================
             # Parser
+            # ==========================
+
             message = self.parser.parse(raw_message)
 
             # ==========================
-            # Actualizar Contexto
+            # Actualizar contexto
             # ==========================
+
             if isinstance(message, dict):
 
                 self.context.update(message)
 
-                print("\n>>> CONTEXTO")
-                print(self.context.get())
-                print()
+                if self.debug:
 
-            print(">>> Llamando al Router")
+                    print("\n========== CONTEXTO ==========")
+                    print("Turno   :", self.context.turn())
+                    print("Tema    :", self.context.topic())
+                    print("Módulo  :", self.context.module())
+                    print("Comando :", self.context.command())
+                    print("==============================\n")
 
-            # Router
+            # ==========================
+            # Router / CommandManager
+            # ==========================
+
+            if self.debug:
+                print(">>> Llamando al Router")
+
             if isinstance(message, dict):
 
                 response = self.router.route(message)
@@ -96,24 +134,42 @@ class Assistant:
 
                 response = self.command_manager.execute(message)
 
-            print(">>> Respuesta:", response)
+            if self.debug:
+                print(">>> Respuesta:", response)
 
+            # ==========================
             # IntentManager
+            # ==========================
+
             if response is None:
+
                 response = self.intent_manager.process(raw_message)
+
+            # ==========================
+            # Respuesta por defecto
+            # ==========================
+
+            if response is None:
+
+                response = "Lo siento, todavía estoy aprendiendo."
 
             print(f"\n{self.name} > {response}")
 
     def stop(self):
 
-        despedida = self.intent_manager.get_by_tag("despedida")
+        despedida = self.intent_manager.get_by_tag(
+            "despedida"
+        )
 
         if despedida:
+
             print(
                 f"\n{self.name} > "
                 f"{random.choice(despedida['responses'])}"
             )
+
         else:
+
             print(f"\n{self.name} > Hasta luego.")
 
 
@@ -121,4 +177,3 @@ if __name__ == "__main__":
 
     assistant = Assistant()
     assistant.start()
-    

@@ -1,36 +1,34 @@
 import re
+import unicodedata
 
 
 class Normalizer:
 
     def normalize(self, text):
 
+        # Verificar que sea una cadena
+        if not isinstance(text, str):
+            return ""
+
         # Eliminar espacios al inicio y final
         text = text.strip()
 
-        # Unificar espacios
-        text = re.sub(r"\s+", " ", text)
-
-        # Minúsculas
+        # Convertir a minúsculas
         text = text.lower()
 
-        # Eliminar signos de apertura y cierre
-        text = text.replace("¿", "")
-        text = text.replace("?", "")
-        text = text.replace("¡", "")
-        text = text.replace("!", "")
+        # Eliminar acentos
+        text = "".join(
+            c
+            for c in unicodedata.normalize("NFD", text)
+            if unicodedata.category(c) != "Mn"
+        )
 
-        # Quitar acentos SOLO de vocales
-        replacements = {
-            "á": "a",
-            "é": "e",
-            "í": "i",
-            "ó": "o",
-            "ú": "u",
-            "ü": "u"
-        }
+        # Eliminar signos de puntuación más comunes
+        text = re.sub(r"[¿?¡!.,;:()\"']", "", text)
 
-        for old, new in replacements.items():
-            text = text.replace(old, new)
+        # Reemplazar múltiples espacios por uno solo
+        text = re.sub(r"\s+", " ", text)
+        
+        print(f"[Normalizer] -> {text}")
 
         return text

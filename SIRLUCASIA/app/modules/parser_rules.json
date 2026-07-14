@@ -104,5 +104,16 @@
         ],
         "command": "recall",
         "key": "profesion"
-    }
+    },
+    {
+    "name": "buscar_conocimiento",
+    "module": "knowledge",
+    "priority": 5,
+    "regex": [
+        "^que es (.+)$",
+        "^qué es (.+)$"
+    ],
+    "command": "search",
+    "topic_group": 1
+}
 ]

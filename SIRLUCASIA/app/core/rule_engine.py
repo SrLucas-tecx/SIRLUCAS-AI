@@ -7,7 +7,7 @@ class RuleEngine:
 
         self.rules = sorted(
             rules,
-            key=lambda rule: rule.get("priority", 999)
+            key=lambda r: r.get("priority", 999)
         )
 
     def match(self, text):
@@ -21,18 +21,26 @@ class RuleEngine:
                 if not match:
                     continue
 
-                value = ""
-
-                if match.groups():
-                    value = match.group(1).strip()
-
-                return {
-                    "module": rule.get("module"),
-                    "command": rule.get("command"),
-                    "key": rule.get("key"),
-                    "value": value,
-                    "rule": rule.get("name")
+                result = {
+                    "rule": rule["name"],
+                    "module": rule["module"],
+                    "command": rule["command"]
                 }
 
+                if "key" in rule:
+
+                    result["key"] = rule["key"]
+
+                    if match.groups():
+                        result["value"] = match.group(1).strip()
+
+                if "topic_group" in rule:
+
+                    result["topic"] = match.group(
+                        rule["topic_group"]
+                    ).strip()
+                    print(result)
+
+                return result
+
         return None
-    
