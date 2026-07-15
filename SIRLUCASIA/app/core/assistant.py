@@ -64,11 +64,6 @@ class Assistant:
         self.router.register(
             "system",
             self.system)
-        self.router.register(
-            "system",
-            self.system
-        )
-
         # ==========================
         # Parser
         # ==========================

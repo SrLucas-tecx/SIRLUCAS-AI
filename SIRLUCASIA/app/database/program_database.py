@@ -1,10 +1,11 @@
 from app.database.base_database import BaseDatabase
 
-from app.database.program_database import ProgramDatabase
 
-db = ProgramDatabase()
+# ==================================================
+# ProgramDatabase
+# Base de datos de programas del sistema
+# ==================================================
 
-print(db.list())
 class ProgramDatabase(BaseDatabase):
 
     def __init__(self):
@@ -13,67 +14,52 @@ class ProgramDatabase(BaseDatabase):
 
         self.data = {
 
-            "bloc de notas": {
-                "exe": "notepad.exe",
-                "aliases": ["notepad", "editor"]
-            },
+            # ==========================
+            # Bloc de notas
+            # ==========================
+            "bloc de notas": "notepad.exe",
+            "notepad": "notepad.exe",
+            "editor": "notepad.exe",
 
-            "calculadora": {
-                "exe": "calc.exe",
-                "aliases": ["calc"]
-            },
+            # ==========================
+            # Calculadora
+            # ==========================
+            "calculadora": "calc.exe",
+            "calc": "calc.exe",
 
-            "paint": {
-                "exe": "mspaint.exe",
-                "aliases": []
-            },
+            # ==========================
+            # Paint
+            # ==========================
+            "paint": "mspaint.exe",
 
-            "explorador": {
-                "exe": "explorer.exe",
-                "aliases": ["explorer"]
-            },
+            # ==========================
+            # Explorador
+            # ==========================
+            "explorador": "explorer.exe",
+            "explorador de archivos": "explorer.exe",
 
-            "vs code": {
-                "exe": "Code.exe",
-                "aliases": [
-                    "code",
-                    "vscode",
-                    "visual studio code"
-                ]
-            },
+            # ==========================
+            # VS Code
+            # ==========================
+            "vs code": "Code.exe",
+            "visual studio code": "Code.exe",
+            "vscode": "Code.exe",
+            "code": "Code.exe",
 
-            "cmd": {
-                "exe": "cmd.exe",
-                "aliases": [
-                    "terminal"
-                ]
-            },
+            # ==========================
+            # Consolas
+            # ==========================
+            "cmd": "cmd.exe",
+            "simbolo del sistema": "cmd.exe",
 
-            "powershell": {
-                "exe": "powershell.exe",
-                "aliases": [
-                    "power shell"
-                ]
-            }
+            "powershell": "powershell.exe",
+            "power shell": "powershell.exe"
 
         }
 
     def find(self, name):
 
-        program = super().find(name)
-
-        if program:
-            return program
-
-        if name is None:
+        if not name:
             return None
 
-        name = name.lower()
-
-        for program in self.data.values():
-
-            if name in program["aliases"]:
-
-                return program
-
-        return None
+        return self.data.get(name.lower())
