@@ -143,22 +143,29 @@
   "module": "document",
   "priority": 15,
   "regex": [
-
-    "^crea un documento (.+)$",
-    "^crear documento (.+)$",
-    "^haz un documento (.+)$",
-    "^genera un documento (.+)$",
-    "^nuevo documento (.+)$",
-
-    "^crea un (txt|pdf|word|excel|markdown|json) (.+)$",
-    "^genera un (txt|pdf|word|excel|markdown|json) (.+)$",
-    "^haz un (txt|pdf|word|excel|markdown|json) (.+)$"
-
+    "^crea un documento ([a-zA-Z0-9_-]+) con el texto (.+)$",
+    "^crear documento ([a-zA-Z0-9_-]+) con el texto (.+)$",
+    "^nuevo documento ([a-zA-Z0-9_-]+) con el texto (.+)$",
+    "^genera un documento ([a-zA-Z0-9_-]+) con el texto (.+)$"
   ],
-    "command": "create",
-      "format_group": 1,
-       "topic_group": 2
-  },
+  "command": "create",
+  "topic_group": 1,
+  "content_group": 2
+},
+{
+  "name": "crear_documento_formato",
+  "module": "document",
+  "priority": 15,
+  "regex": [
+    "^crea un ([a-z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
+    "^genera un ([a-z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
+    "^nuevo ([a-z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$"
+  ],
+  "command": "create",
+  "format_group": 1,
+  "topic_group": 2,
+  "content_group": 3
+},
   {
     "name": "abrir_app",
     "module": "system",
@@ -229,5 +236,47 @@
     ],
     "command": "weather",
     "topic_group": 1
-  }
+  },
+  {
+    "name":"escribir_documento",
+    "module":"document",
+    "command":"write",
+    "priority":15,
+
+    "regex":[
+        "^escribe en ([a-zA-Z0-9_-]+) (.+)$",
+        "^agrega al documento ([a-zA-Z0-9_-]+) (.+)$"
+    ],
+
+    "topic_group":1,
+    "content_group":2
+},
+{
+    "name":"leer_documento",
+    "module":"document",
+    "command":"read",
+    "priority":15,
+
+    "regex":[
+        "^lee (.+)$",
+        "^abre documento (.+)$"
+    ],
+
+    "topic_group":1
+},
+{
+    "notepad": "notepad.exe",
+    "bloc de notas": "notepad.exe",
+
+    "calc": "calc.exe",
+    "calculadora": "calc.exe",
+
+    "paint": "mspaint.exe",
+
+    "vs code": "Code.exe",
+
+    "cmd": "cmd.exe",
+
+    "powershell": "powershell.exe"
+}
 ]

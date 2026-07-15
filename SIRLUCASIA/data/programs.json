@@ -1,0 +1,15 @@
+{
+    "notepad": "notepad.exe",
+    "bloc de notas": "notepad.exe",
+
+    "calc": "calc.exe",
+    "calculadora": "calc.exe",
+
+    "paint": "mspaint.exe",
+
+    "vs code": "Code.exe",
+
+    "cmd": "cmd.exe",
+
+    "powershell": "powershell.exe"
+}

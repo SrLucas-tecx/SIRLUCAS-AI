@@ -18,49 +18,51 @@ class RuleEngine:
 
                 match = re.match(regex, text)
 
-                if not match:
+                if match is None:
                     continue
 
                 result = {
+
                     "rule": rule["name"],
                     "module": rule["module"],
                     "command": rule["command"]
+
                 }
 
-                # ==========================
-                # key / value
-                # ==========================
+                # ======================================
+                # key / value (Memoria)
+                # ======================================
 
                 if "key" in rule:
 
                     result["key"] = rule["key"]
 
-                    if match.groups():
+                    if match.lastindex:
+
                         result["value"] = match.group(1).strip()
 
-                # ==========================
-                # NUEVO:
-                # Capturar formato
-                # ==========================
+                # ======================================
+                # Capturar automáticamente
+                # topic_group
+                # format_group
+                # content_group
+                # etc.
+                # ======================================
 
-                if "format_group" in rule:
+                for field, group in rule.items():
 
-                    result["format"] = match.group(
-                        rule["format_group"]
-                    ).strip()
+                    if not field.endswith("_group"):
+                        continue
 
-                # ==========================
-                # Capturar tema
-                # ==========================
+                    if group <= match.lastindex:
 
-                if "topic_group" in rule:
+                        name = field.replace("_group", "")
 
-                    result["topic"] = match.group(
-                        rule["topic_group"]
-                    ).strip()
+                        result[name] = match.group(group).strip()
 
-                print(result)
+                print(f"[RuleEngine] -> {result}")
 
                 return result
 
         return None
+    
