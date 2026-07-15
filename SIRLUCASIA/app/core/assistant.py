@@ -11,6 +11,8 @@ from app.core.context_manager import ContextManager
 from app.core.knowledge_manager import KnowledgeManager
 from app.core.web_manager import WebManager
 from app.service.system_manager import SystemManager
+from app.service.document_manager import DocumentManager
+
 
 
 
@@ -36,13 +38,9 @@ class Assistant:
         self.knowledge = KnowledgeManager()
         self.web = WebManager()
 
-       # ==========================
-       # CORRECCIÓN
-       # Antes no existía self.system y el Router lanzaba:
-       # AttributeError: 'Assistant' object has no attribute 'system'
-       # Ahora primero se crea el módulo.
-       # ==========================
         self.system = SystemManager()
+
+        self.document = DocumentManager()
         # ==========================
         # Router
         # ==========================
@@ -64,6 +62,10 @@ class Assistant:
         self.router.register(
             "system",
             self.system)
+        
+        self.router.register(
+            "document",
+            self.document)
         # ==========================
         # Parser
         # ==========================

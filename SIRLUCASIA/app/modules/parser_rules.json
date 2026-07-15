@@ -139,17 +139,25 @@
     "topic_group": 1
   },
   {
-    "name": "crear_documento",
-    "module": "document",
-    "priority": 15,
-    "regex": [
-      "^crea un documento (.+)$",
-      "^crear documento (.+)$",
-      "^haz un documento (.+)$",
-      "^genera un documento (.+)$"
-    ],
+  "name": "crear_documento",
+  "module": "document",
+  "priority": 15,
+  "regex": [
+
+    "^crea un documento (.+)$",
+    "^crear documento (.+)$",
+    "^haz un documento (.+)$",
+    "^genera un documento (.+)$",
+    "^nuevo documento (.+)$",
+
+    "^crea un (txt|pdf|word|excel|markdown|json) (.+)$",
+    "^genera un (txt|pdf|word|excel|markdown|json) (.+)$",
+    "^haz un (txt|pdf|word|excel|markdown|json) (.+)$"
+
+  ],
     "command": "create",
-    "topic_group": 1
+      "format_group": 1,
+       "topic_group": 2
   },
   {
     "name": "abrir_app",
