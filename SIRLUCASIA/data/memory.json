@@ -1,5 +1,6 @@
 {
     "nombre": "juan",
-    "profesion": "programador",
-    "edad": "20"
+    "profesion": "desarrollador",
+    "edad": "24",
+    "ciudad": "toluca"
 }

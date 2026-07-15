@@ -35,25 +35,24 @@
     "module": "memory",
     "priority": 1,
     "regex": [
-      "^tengo (\\d+) años$",
-      "^tengo (\\d+)$"
+        "^tengo (\\d+) anos$",
+        "^tengo (\\d+)$"
     ],
     "command": "remember",
     "key": "edad"
   },
-  {
+    {
     "name": "recordar_edad",
     "module": "memory",
     "priority": 2,
     "regex": [
-      "^cuantos años tengo$",
-      "^cuántos años tengo$",
-      "^¿cuantos años tengo\\??$",
-      "^¿cuántos años tengo\\??$"
+        "^que edad tengo$",
+        "^cuantos anos tengo$",
+        "^mi edad$"
     ],
     "command": "recall",
     "key": "edad"
-  },
+},
   {
     "name": "guardar_ciudad",
     "module": "memory",

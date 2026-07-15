@@ -10,6 +10,8 @@ from app.core.router import Router
 from app.core.context_manager import ContextManager
 from app.core.knowledge_manager import KnowledgeManager
 from app.core.web_manager import WebManager
+from app.service.system_manager import SystemManager
+
 
 
 class Assistant:
@@ -30,14 +32,17 @@ class Assistant:
         self.memory_manager = MemoryManager()
         self.command_manager = CommandManager(self.memory_manager)
         self.context = ContextManager()
+
         self.knowledge = KnowledgeManager()
         self.web = WebManager()
 
-        #print(self.knowledge.search("python"))
-        #print(self.knowledge.search("python"))
-        #print(self.knowledge.search("linux"))
-        #print(self.knowledge.search("ia"))
-
+       # ==========================
+       # CORRECCIÓN
+       # Antes no existía self.system y el Router lanzaba:
+       # AttributeError: 'Assistant' object has no attribute 'system'
+       # Ahora primero se crea el módulo.
+       # ==========================
+        self.system = SystemManager()
         # ==========================
         # Router
         # ==========================
@@ -55,12 +60,23 @@ class Assistant:
         self.router.register(
             "web",
             self.web)
+        
+        self.router.register(
+            "system",
+            self.system)
+        self.router.register(
+            "system",
+            self.system
+        )
 
         # ==========================
         # Parser
         # ==========================
 
         self.parser = Parser()
+
+
+
 
     def start(self):
 
