@@ -104,83 +104,48 @@ class DocumentManager:
         if not name:
             return "No especificaste el nombre del documento."
 
-        # Buscar cualquier extensión compatible
-
-        extensions = [
-            ".txt",
-            ".md",
-            ".json",
-            ".docx",
-            ".pdf"
-        ]
-
-        filepath = None
-
-        for ext in extensions:
-
-            path = os.path.join(
-                self.path,
-                name + ext
-            )
-
-            if os.path.exists(path):
-                filepath = path
-                extension = ext
-                break
+        filepath, extension = self.find_document(name)
 
         if filepath is None:
             return "No encontré ese documento."
 
         try:
 
-            # TXT
-            if extension == ".txt":
+            if extension in [".txt", ".md", ".json"]:
 
                 with open(filepath, "r", encoding="utf-8") as file:
                     return file.read()
 
-            # Markdown
-            elif extension == ".md":
-
-                with open(filepath, "r", encoding="utf-8") as file:
-                    return file.read()
-
-            # JSON
-            elif extension == ".json":
-
-                with open(filepath, "r", encoding="utf-8") as file:
-                    return file.read()
-
-            # DOCX
             elif extension == ".docx":
 
                 from docx import Document
 
                 doc = Document(filepath)
 
-                texto = []
-
-                for p in doc.paragraphs:
-                    texto.append(p.text)
-
-                return "\n".join(texto)
-
-            # PDF
+                return "\n".join(
+                    paragraph.text
+                    for paragraph in doc.paragraphs
+                )
 
             elif extension == ".pdf":
 
-                return "La lectura de PDF llegará en la siguiente actualización."
+                return "La lectura de PDF llegará en una próxima versión."
+
+            return "Formato no soportado."
 
         except Exception as e:
 
             return str(e)
-
     # ==================================================
     # Escribir documento (Sprint 3)
     # ==================================================
 
     # ==================================================
     # Escribir en documento
+    # ==================================================
+
+        # ==================================================
+    # Escribir documento
     # ==================================================
 
     def write(self, data):
@@ -191,75 +156,18 @@ class DocumentManager:
         if not name:
             return "No especificaste el nombre del documento."
 
-        extensions = [
-            ".txt",
-            ".md",
-            ".json",
-            ".docx"
-        ]
-
-        filepath = None
-
-        for ext in extensions:
-
-            path = os.path.join(
-                self.path,
-                name + ext
-            )
-
-            if os.path.exists(path):
-
-                filepath = path
-                extension = ext
-                break
+        filepath, extension = self.find_document(name)
 
         if filepath is None:
             return "No encontré ese documento."
 
         try:
 
-            # ==========================
-            # TXT
-            # ==========================
+            if extension in [".txt", ".md"]:
 
-            if extension == ".txt":
-
-                with open(
-                    filepath,
-                    "a",
-                    encoding="utf-8"
-                ) as file:
+                with open(filepath, "a", encoding="utf-8") as file:
 
                     file.write("\n" + content)
-
-            # ==========================
-            # Markdown
-            # ==========================
-
-            elif extension == ".md":
-
-                with open(
-                    filepath,
-                    "a",
-                    encoding="utf-8"
-                ) as file:
-
-                    file.write("\n" + content)
-
-            # ==========================
-            # JSON
-            # ==========================
-
-            elif extension == ".json":
-
-                return (
-                    "Por seguridad todavía no puedo "
-                    "modificar archivos JSON."
-                )
-
-            # ==========================
-            # Word
-            # ==========================
 
             elif extension == ".docx":
 
@@ -271,8 +179,63 @@ class DocumentManager:
 
                 doc.save(filepath)
 
-            return f"Contenido agregado a '{name}{extension}'."
+            elif extension == ".json":
+
+                return (
+                    "Por seguridad todavía no puedo "
+                    "modificar archivos JSON."
+                )
+
+            elif extension == ".pdf":
+
+                return (
+                    "La edición de PDF estará disponible "
+                    "en una próxima versión."
+                )
+
+            return f"Contenido agregado a '{os.path.basename(filepath)}'."
 
         except Exception as e:
 
             return str(e)
+    # ==================================================
+    # Buscar documento
+    # ==================================================
+
+    def find_document(self, name):
+
+        for file in os.listdir(self.path):
+
+            filename, extension = os.path.splitext(file)
+
+            if filename.lower() == name.lower():
+
+                return os.path.join(self.path, file), extension
+
+        return None, None
+    # ==================================================
+# Eliminar documento
+# ==================================================
+
+def delete(self, data):
+
+    name = data.get("topic")
+
+    if not name:
+        return "No especificaste el nombre del documento."
+
+    filepath, extension = self.find_document(name)
+
+    if filepath is None:
+        return "No encontré ese documento."
+
+    try:
+
+        os.remove(filepath)
+
+        return f"Documento '{os.path.basename(filepath)}' eliminado correctamente."
+
+    except Exception as e:
+
+        return str(e)
+    

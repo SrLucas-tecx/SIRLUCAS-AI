@@ -274,5 +274,20 @@
         "^abre documento (.+)$"
     ],
     "topic_group":1
+},
+{
+    "name":"eliminar_documento",
+    "module":"document",
+    "command":"delete",
+    "priority":15,
+
+    "regex":[
+        "^elimina (.+)$",
+        "^borra (.+)$",
+        "^elimina documento (.+)$",
+        "^borrar documento (.+)$"
+    ],
+
+    "topic_group":1
 }
 ]
