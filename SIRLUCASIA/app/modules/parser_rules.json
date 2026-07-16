@@ -265,18 +265,14 @@
     "topic_group":1
 },
 {
-    "notepad": "notepad.exe",
-    "bloc de notas": "notepad.exe",
-
-    "calc": "calc.exe",
-    "calculadora": "calc.exe",
-
-    "paint": "mspaint.exe",
-
-    "vs code": "Code.exe",
-
-    "cmd": "cmd.exe",
-
-    "powershell": "powershell.exe"
+    "name":"leer_documento",
+    "module":"document",
+    "command":"read",
+    "priority":15,
+    "regex":[
+        "^lee (.+)$",
+        "^abre documento (.+)$"
+    ],
+    "topic_group":1
 }
 ]

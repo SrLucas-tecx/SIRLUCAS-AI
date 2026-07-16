@@ -1,4 +1,4 @@
-from app.document.creators.base_creator import BaseCreator
+from SIRLUCASIA.app.document.creators.base_creator import BaseCreator
 
 
 class TxtCreator(BaseCreator):
