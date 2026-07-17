@@ -1,17 +1,32 @@
 from app.core.memory_manager import MemoryManager
-memory = MemoryManager()
 
-print("Guardando datos...")
-memory.remember("nombre", "Juan")
 
-print("Recuperando dato...")
-print(memory.recall("nombre"))
+def test_remember():
 
-print("Memoria completa:")
-print(memory.list_memories())
+    memory = MemoryManager()
 
-print("Eliminando dato...")
-memory.forget("nombre")
+    memory.remember("nombre", "Juan")
 
-print("Memoria final:")
-print(memory.list_memories())
+    assert memory.recall("nombre") == "Juan"
+
+
+def test_forget():
+
+    memory = MemoryManager()
+
+    memory.remember("edad", "20")
+
+    assert memory.forget("edad") is True
+
+    assert memory.recall("edad") is None
+
+
+def test_list_memories():
+
+    memory = MemoryManager()
+
+    memory.remember("ciudad", "Toluca")
+
+    memories = memory.list_memories()
+
+    assert "ciudad" in memories

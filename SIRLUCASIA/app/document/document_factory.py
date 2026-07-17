@@ -1,7 +1,8 @@
 import json
 
-from reportlab.pdfgen import canvas
 from docx import Document
+from reportlab.pdfgen import canvas
+from openpyxl import Workbook
 
 
 class DocumentFactory:
@@ -34,9 +35,11 @@ class DocumentFactory:
     def create_json(path, content):
 
         try:
+
             data = json.loads(content)
 
             with open(path, "w", encoding="utf-8") as file:
+
                 json.dump(
                     data,
                     file,
@@ -75,12 +78,34 @@ class DocumentFactory:
     @staticmethod
     def create_docx(path, content):
 
-        doc = Document()
+        document = Document()
+
+        document.add_heading("Documento generado por SIRLUCAS AI", level=1)
 
         for line in content.split("\n"):
-            doc.add_paragraph(line)
 
-        doc.save(path)
+            document.add_paragraph(line)
+
+        document.save(path)
+
+    # =====================================
+    # Excel
+    # =====================================
+
+    @staticmethod
+    def create_xlsx(path, content):
+
+        workbook = Workbook()
+
+        sheet = workbook.active
+
+        sheet.title = "Datos"
+
+        for row, line in enumerate(content.split("\n"), start=1):
+
+            sheet.cell(row=row, column=1).value = line
+
+        workbook.save(path)
 
     # =====================================
     # Dispatcher
@@ -95,13 +120,15 @@ class DocumentFactory:
             ".md": DocumentFactory.create_md,
             ".json": DocumentFactory.create_json,
             ".pdf": DocumentFactory.create_pdf,
-            ".docx": DocumentFactory.create_docx
+            ".docx": DocumentFactory.create_docx,
+            ".xlsx": DocumentFactory.create_xlsx
 
         }
 
         creator = creators.get(extension)
 
         if creator is None:
+
             raise ValueError(
                 f"Formato no soportado: {extension}"
             )
