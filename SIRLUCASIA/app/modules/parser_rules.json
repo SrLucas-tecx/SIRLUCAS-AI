@@ -171,15 +171,17 @@
     "module": "system",
     "priority": 10,
     "regex": [
-      "^abre (.+)$",
-      "^ejecuta (.+)$",
-      "^inicia (.+)$",
-      "^abre la aplicacion (.+)$",
-      "^abre el programa (.+)$"
+        "^abre (.+)$",
+        "^abrir (.+)$",
+        "^ejecuta (.+)$",
+        "^inicia (.+)$",
+        "^abre la aplicacion (.+)$",
+        "^abre el programa (.+)$"
     ],
     "command": "open",
     "topic_group": 1
-  },
+},
+  
   {
     "name": "cerrar_app",
     "module": "system",
@@ -265,17 +267,6 @@
     "topic_group":1
 },
 {
-    "name":"leer_documento",
-    "module":"document",
-    "command":"read",
-    "priority":15,
-    "regex":[
-        "^lee (.+)$",
-        "^abre documento (.+)$"
-    ],
-    "topic_group":1
-},
-{
     "name":"eliminar_documento",
     "module":"document",
     "command":"delete",
@@ -289,5 +280,53 @@
     ],
 
     "topic_group":1
+},
+{
+  "name": "renombrar_documento",
+  "module": "document",
+  "priority": 15,
+  "regex": [
+    "^renombra (.+) a (.+)$",
+    "^cambia el nombre de (.+) a (.+)$"
+  ],
+  "command": "rename",
+  "old_name_group": 1,
+  "new_name_group": 2
+},
+{
+    "name": "copiar_documento",
+    "module": "document",
+    "priority": 15,
+    "regex": [
+        "^copia (.+) a (.+)$",
+        "^duplica (.+) a (.+)$"
+    ],
+    "command": "copy",
+    "old_name_group": 1,
+    "new_name_group": 2
+},
+{
+    "name": "listar_documentos",
+    "module": "document",
+    "priority": 20,
+    "regex": [
+        "^lista documentos$",
+        "^listar documentos$",
+        "^muestrame mis documentos$",
+        "^que documentos tengo$"
+    ],
+    "command": "list"
+},
+{
+    "name": "informacion_documento",
+    "module": "document",
+    "priority": 20,
+    "regex": [
+        "^informacion de (.+)$",
+        "^info de (.+)$",
+        "^datos de (.+)$"
+    ],
+    "command": "info",
+    "topic_group": 1
 }
 ]

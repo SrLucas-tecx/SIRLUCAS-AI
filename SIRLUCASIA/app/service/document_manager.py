@@ -1,7 +1,11 @@
 import os
+import shutil
+
+from datetime import datetime
 
 from app.database.document_database import DocumentDatabase
 from app.document.document_factory import DocumentFactory
+
 
 
 # ==================================================
@@ -15,6 +19,25 @@ class DocumentManager:
 
         self.database = DocumentDatabase()
 
+        self.apps = {
+
+        "bloc de notas": "notepad.exe",
+        "notepad": "notepad.exe",
+
+        "calculadora": "calc.exe",
+        "calc": "calc.exe",
+
+        "explorador": "explorer.exe",
+
+        "paint": "mspaint.exe",
+
+        "vs code": "Code.exe",
+
+        "cmd": "cmd.exe",
+
+        "powershell": "powershell.exe"
+
+    }
         self.path = "documents"
 
         os.makedirs(self.path, exist_ok=True)
@@ -213,29 +236,224 @@ class DocumentManager:
                 return os.path.join(self.path, file), extension
 
         return None, None
+
     # ==================================================
-# Eliminar documento
-# ==================================================
+    # Eliminar documento
+    # ==================================================
 
-def delete(self, data):
-
-    name = data.get("topic")
-
-    if not name:
-        return "No especificaste el nombre del documento."
-
-    filepath, extension = self.find_document(name)
-
-    if filepath is None:
-        return "No encontré ese documento."
-
-    try:
-
-        os.remove(filepath)
-
-        return f"Documento '{os.path.basename(filepath)}' eliminado correctamente."
-
-    except Exception as e:
-
-        return str(e)
+    def delete(self, data):
+        name = data.get("topic")
+        if not name:
+            return "No especificaste el nombre del documento."
+        filepath, extension = self.find_document(name)
+        
+        if filepath is None:
+            return "No encontré ese documento."
+        
+        try:
+            os.remove(filepath)
+            return f"Documento '{os.path.basename(filepath)}' eliminado correctamente."
+        except Exception as e:
+            return str(e)
     
+    # ==================================================
+    # Renombrar documento
+    # ==================================================
+
+    def rename(self, data):
+        old_name = data.get("old_name")
+        new_name = data.get("new_name")
+        
+        if not old_name or not new_name:
+            return "Faltan nombres para renombrar."
+        
+        filepath, extension = self.find_document(old_name)
+        
+        if filepath is None:
+            return "No encontré ese documento."
+        
+        new_path = os.path.join(
+        self.path,
+        new_name + extension)
+
+        if os.path.exists(new_path):
+            return "Ya existe un documento con ese nombre."
+        try:
+            os.rename(filepath, new_path)
+            return (
+                f"Documento renombrado de "
+                f"'{old_name}{extension}' "
+                f"a "
+                f"'{new_name}{extension}'."
+                )
+        except Exception as e:
+            return str(e)
+        
+    # ==================================================
+    # Copiar documento
+   # ==================================================
+
+    def copy(self, data):
+        old_name = data.get("old_name")
+        new_name = data.get("new_name")
+        
+        if not old_name or not new_name:
+            return "Faltan nombres para copiar."
+        
+        filepath, extension = self.find_document(old_name)
+
+        if filepath is None:
+          return "No encontré ese documento."
+        
+        new_path = os.path.join(
+        self.path,
+        new_name + extension
+        )
+
+        if os.path.exists(new_path):
+          return "Ya existe un documento con ese nombre."
+        
+        try:
+
+          shutil.copy2(
+              filepath,
+              new_path
+        )
+          return (
+            f"Documento copiado de "
+            f"'{old_name}{extension}' "
+            f"a "
+            f"'{new_name}{extension}'."
+        )
+        except Exception as e:
+            return str(e)
+    
+    # ==================================================
+    # Listar documentos
+    # ==================================================
+    
+    def list(self, data):
+    
+        try:
+    
+            files = os.listdir(self.path)
+    
+            if not files:
+                return "No hay documentos."
+    
+            files.sort()
+    
+            response = (
+                f"Documentos encontrados ({len(files)})\n\n"
+            )
+    
+            for file in files:
+    
+                response += f"• {file}\n"
+    
+            return response
+    
+        except Exception as e:
+    
+            return str(e)
+        
+    # ==================================================
+    # Información del documento
+    # ==================================================
+    
+    def info(self, data):
+    
+        name = data.get("topic")
+    
+        if not name:
+            return "No especificaste el nombre del documento."
+    
+        filepath, extension = self.find_document(name)
+    
+        if filepath is None:
+            return "No encontré ese documento."
+    
+        try:
+    
+            size = os.path.getsize(filepath)
+    
+            created = os.path.getctime(filepath)
+    
+            modified = os.path.getmtime(filepath)
+    
+            created = datetime.fromtimestamp(created)
+    
+            modified = datetime.fromtimestamp(modified)
+    
+            return (
+                f"Nombre: {os.path.basename(filepath)}\n"
+                f"Formato: {extension}\n"
+                f"Tamaño: {size/1024:.2f} KB\n"
+                f"Creado: {created.strftime('%d/%m/%Y %H:%M:%S')}\n"
+                f"Modificado: {modified.strftime('%d/%m/%Y %H:%M:%S')}\n"
+                f"Ruta: {filepath}"
+            )
+    
+        except Exception as e:
+    
+            return str(e)
+    # ==================================================
+    # Abrir documento
+    # ==================================================
+    
+    def open(self, data):
+    
+        topic = data.get("topic")
+    
+        if not topic:
+            return "No especificaste qué abrir."
+    
+        topic = topic.lower()
+    
+        # ==========================================
+        # Intentar abrir aplicación
+        # ==========================================
+    
+        if topic in self.apps:
+    
+            try:
+    
+                os.system(f'start "" "{self.apps[topic]}"')
+    
+                return f"Abriendo {topic}..."
+    
+            except Exception as e:
+    
+                return f"No pude abrir {topic}: {e}"
+    
+        # ==========================================
+        # Intentar abrir documento
+        # ==========================================
+    
+        filepath, extension = self.document.find_document(topic)
+    
+        if filepath is not None:
+    
+            try:
+    
+                os.startfile(filepath)
+    
+                return (
+                    f"Abriendo documento "
+                    f"'{os.path.basename(filepath)}'."
+                )
+    
+            except Exception as e:
+    
+                return (
+                    f"No pude abrir el documento: {e}"
+                )
+    
+        # ==========================================
+        # No encontrado
+        # ==========================================
+    
+        return (
+            f"No encontré ninguna aplicación "
+            f"ni documento llamado '{topic}'."
+        )
