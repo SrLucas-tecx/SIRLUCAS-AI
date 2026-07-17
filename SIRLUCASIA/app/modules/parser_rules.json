@@ -157,9 +157,9 @@
   "module": "document",
   "priority": 15,
   "regex": [
-    "^crea un ([a-z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
-    "^genera un ([a-z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
-    "^nuevo ([a-z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$"
+    "^crea un ([a-z]+) ([a-zA-Z0-9_-]+)(?: con el texto (.*))?$",
+    "^genera un ([a-z]+) ([a-zA-Z0-9_-]+)(?: con el texto (.*))?$",
+    "^nuevo ([a-z]+) ([a-zA-Z0-9_-]+)(?: con el texto (.*))?$"
   ],
   "command": "create",
   "format_group": 1,
