@@ -4,69 +4,120 @@ class Router:
 
         self.modules = {}
 
-    # ==========================================
+    # ============================================
     # Registrar módulos
-    # ==========================================
+    # ============================================
+
     def register(self, name, module):
 
-        name = name.lower()
+        self.modules[name.lower()] = module
 
-        self.modules[name] = module
+        print(f"[Router] Módulo registrado -> {name.lower()}")
 
-        print(f"[Router] Módulo registrado -> {name}")
-
-    # ==========================================
+    # ============================================
     # Router principal
-    # ==========================================
+    # ============================================
+
     def route(self, data):
 
         if not isinstance(data, dict):
             return None
 
-        module_name = data.get("module", "").lower()
+        module = data.get("module", "").lower()
+        command = data.get("command")
+        topic = data.get("topic")
 
-        if not module_name:
+        # Resolver automáticamente OPEN
 
-            print("[Router] No se especificó ningún módulo.")
+        if command == "open":
 
+            response = self._resolve_open(topic)
+
+            if response is not None:
+                return response
+
+        # Resolver automáticamente CLOSE
+
+        if command == "close":
+
+            response = self._resolve_close(topic)
+
+            if response is not None:
+                return response
+
+        # Router normal
+
+        manager = self.modules.get(module)
+
+        if manager is None:
+            return f"No existe el módulo '{module}'."
+
+        return manager.execute(data)
+
+    # ============================================
+    # Resolver apertura
+    # ============================================
+
+    def _resolve_open(self, topic):
+
+        if not topic:
             return None
 
-        # ==========================================
-        # CASO ESPECIAL:
-        # abrir aplicación o documento
-        # ==========================================
+        system = self.modules.get("system")
+        document = self.modules.get("document")
 
-        if module_name == "system" and data.get("command") == "open":
+        # Primero revisar programas
 
-            system = self.modules.get("system")
-            document = self.modules.get("document")
+        if system:
 
-            if system:
+            if system.database.find(topic):
 
-                response = system.open(data)
+                return system.open({
+                    "topic": topic
+                })
 
-                # Si sí encontró la aplicación
-                if not response.startswith("No conozco"):
+        # Después revisar documentos
 
-                    return response
+        if document:
 
-            # Si no era aplicación intentamos abrir documento
-            if document:
+            if document.exists(topic):
 
-                return document.open(data)
+                return document.open({
+                    "topic": topic
+                })
 
-            return "No existe ningún módulo para abrir documentos."
+        return None
 
-        # ==========================================
-        # Ruteo normal
-        # ==========================================
+    # ============================================
+    # Resolver cierre
+    # ============================================
 
-        module = self.modules.get(module_name)
+    def _resolve_close(self, topic):
 
-        if module is None:
-
-            print(f"[Router] No existe el módulo '{module_name}'.")
-
+        if not topic:
             return None
 
-        return module.execute(data)
+        system = self.modules.get("system")
+        document = self.modules.get("document")
+
+        # Programas
+
+        if system:
+
+            if system.database.find(topic):
+
+                return system.close({
+                    "topic": topic
+                })
+
+        # Documentos
+
+        if document:
+
+            if document.exists(topic):
+
+                return document.close({
+                    "topic": topic
+                })
+
+        return None

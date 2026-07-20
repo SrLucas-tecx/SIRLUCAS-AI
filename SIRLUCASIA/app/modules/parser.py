@@ -22,14 +22,7 @@ class Parser:
         print(f"[Parser] {len(self.rules)} reglas cargadas.")
         print("=" * 50)
 
-        print("\n===== REGLAS CARGADAS =====")
-
-        for rule in self.rules:
-            print(f"- {rule['name']}")
-
-        print("===========================\n")
-
-    def parse(self, message):
+    def parse(self, message, context=None):
 
         text = self.normalizer.normalize(message)
 
@@ -39,10 +32,39 @@ class Parser:
 
         print(f"[RuleEngine] -> {result}")
 
-        if result:
+        if result is None:
+            return message
 
-            print(f"[Parser] Regla ejecutada: {result['rule']}")
+        # =====================================
+        # CONTEXTO INTELIGENTE
+        # =====================================
 
-            return result
+        if context is not None:
 
-        return message
+            if (
+                result["module"] == "document"
+                and "topic" not in result
+                and context.document() is not None
+            ):
+
+                result["topic"] = context.document()
+
+            elif (
+                result["module"] == "system"
+                and "topic" not in result
+                and context.program() is not None
+            ):
+
+                result["topic"] = context.program()
+
+            elif (
+                result["module"] in ["knowledge", "web"]
+                and "topic" not in result
+                and context.search() is not None
+            ):
+
+                result["topic"] = context.search()
+
+        print(f"[Parser] Regla ejecutada: {result['rule']}")
+
+        return result

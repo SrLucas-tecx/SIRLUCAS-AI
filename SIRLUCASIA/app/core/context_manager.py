@@ -1,52 +1,75 @@
-import time
-
+# ==================================================
+# ContextManager
+# Guarda el contexto de la conversación
+# ==================================================
 
 class ContextManager:
 
     def __init__(self):
 
-        self.turn_count = 0
-        self.reset()
+        self.clear()
 
-    def reset(self):
-
-        self.context = {
-            "topic": None,
-            "module": None,
-            "command": None,
-            "last_message": None,
-            "timestamp": None
-        }
+    # ==========================================
+    # Actualizar contexto
+    # ==========================================
 
     def update(self, data):
 
-        if not isinstance(data, dict):
-            return
+        self.turn_number += 1
 
-        self.turn_count += 1
+        self.current_topic = data.get("topic")
+        self.current_module = data.get("module")
+        self.current_command = data.get("command")
 
-        self.context["topic"] = data.get("key") or data.get("topic")
-        self.context["module"] = data.get("module")
-        self.context["command"] = data.get("command")
-        self.context["last_message"] = data
-        self.context["timestamp"] = time.time()
+        if self.current_module == "document":
 
-    def get(self):
+            self.last_document = self.current_topic
 
-        return self.context
+        elif self.current_module == "system":
+
+            self.last_program = self.current_topic
+
+        elif self.current_module in ("knowledge", "web"):
+
+            self.last_search = self.current_topic
+
+    # ==========================================
+    # Getters
+    # ==========================================
 
     def turn(self):
-
-        return self.turn_count
+        return self.turn_number
 
     def topic(self):
-
-        return self.context["topic"]
+        return self.current_topic
 
     def module(self):
-
-        return self.context["module"]
+        return self.current_module
 
     def command(self):
+        return self.current_command
 
-        return self.context["command"]
+    def document(self):
+        return self.last_document
+
+    def program(self):
+        return self.last_program
+
+    def search(self):
+        return self.last_search
+
+    # ==========================================
+    # Reiniciar contexto
+    # ==========================================
+
+    def clear(self):
+
+        self.turn_number = 0
+
+        self.current_topic = None
+        self.current_module = None
+        self.current_command = None
+
+        self.last_document = None
+        self.last_program = None
+        self.last_search = None

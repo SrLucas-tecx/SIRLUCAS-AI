@@ -49,3 +49,12 @@ class ConversationManager:
             return "No tengo una respuesta para eso."
 
         return response
+    
+    def history(self, data):
+        
+        history = self.database.last(10)
+        
+        if not history:
+            return "No hay historial."
+        
+        return "\n".join(history)

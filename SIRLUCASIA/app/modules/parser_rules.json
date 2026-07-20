@@ -345,5 +345,37 @@
     ],
     "command": "talk",
     "topic_group": 0
+},
+{
+    "name":"historial",
+    "module":"conversation",
+    "priority":20,
+
+    "regex":[
+        "^historial$",
+        "^mostrar historial$",
+        "^ultimos comandos$",
+        "^qué hice$",
+        "^que hice$"
+    ],
+
+    "command":"history"
+},
+{
+    "name": "cerrar_referencia",
+    "module": "system",
+    "priority": 2,
+
+    "regex":[
+        "^cierralo$",
+        "^ciérralo$",
+        "^cierrala$",
+        "^ciérrala$",
+        "^terminalo$",
+        "^termínalo$"
+    ],
+
+    "command":"close",
+    "topic":"lo"
 }
 ]

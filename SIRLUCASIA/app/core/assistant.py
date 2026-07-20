@@ -8,17 +8,16 @@ from app.core.command_manager import CommandManager
 from app.modules.parser import Parser
 from app.core.router import Router
 from app.core.context_manager import ContextManager
-from app.core.knowledge_manager import KnowledgeManager
-from app.core.web_manager import WebManager
-from app.service.system_manager import SystemManager
-from app.service.document_manager import DocumentManager
-from app.core.calculator_manager import CalculatorManager
 from app.core.conversation_manager import ConversationManager
 from app.core.history_manager import HistoryManager
 
+from app.core.knowledge_manager import KnowledgeManager
+from app.core.web_manager import WebManager
+from app.core.calculator_manager import CalculatorManager
 
-
-
+from app.service.system_manager import SystemManager
+from app.service.document_manager import DocumentManager
+from app.core.context_resolver import ContextResolver
 
 class Assistant:
 
@@ -27,31 +26,42 @@ class Assistant:
         self.name = "SIRLUCAS AI"
         self.version = "0.1"
 
-        # Modo depuración
         self.debug = True
 
-        # ==========================
-        # Módulos principales
-        # ==========================
+        # ====================================
+        # Managers principales
+        # ====================================
 
         self.intent_manager = IntentManager()
+
         self.memory_manager = MemoryManager()
-        self.command_manager = CommandManager(self.memory_manager)
+
+        self.command_manager = CommandManager(
+            self.memory_manager
+        )
+
         self.context = ContextManager()
+
         self.conversation = ConversationManager()
 
+        self.history = HistoryManager()
+
         self.knowledge = KnowledgeManager()
+
         self.web = WebManager()
 
         self.system = SystemManager()
 
         self.document = DocumentManager()
 
-        self.history=HistoryManager
+        self.calculator = CalculatorManager()
 
-        # ==========================
+        self.context_resolver = ContextResolver()
+        
+
+        # ====================================
         # Router
-        # ==========================
+        # ====================================
 
         self.router = Router()
 
@@ -59,58 +69,84 @@ class Assistant:
             "memory",
             self.command_manager
         )
+
         self.router.register(
             "knowledge",
-            self.knowledge)
-        
+            self.knowledge
+        )
+
         self.router.register(
             "web",
-            self.web)
-        
+            self.web
+        )
+
         self.router.register(
             "system",
-            self.system)
-        
+            self.system
+        )
+
         self.router.register(
             "document",
-            self.document)
-        
+            self.document
+        )
+
         self.router.register(
             "calculator",
-            CalculatorManager( )
+            self.calculator
         )
+
         self.router.register(
             "conversation",
-            self.conversation)
+            self.conversation
+        )
 
-            
-            
-        # ==========================
+        self.router.register(
+            "history",
+            self.history
+        )
+
+        # ====================================
         # Parser
-        # ==========================
+        # ====================================
 
         self.parser = Parser()
 
+    # ====================================
+    # Inicio
+    # ====================================
 
     def start(self):
 
         self.show_banner()
+
         self.chat()
+
+    # ====================================
+    # Banner
+    # ====================================
 
     def show_banner(self):
 
         print("=" * 60)
         print(f"{self.name} | Versión {self.version}")
         print("=" * 60)
+
         print("¡Qué onda!")
         print("Mi nombre es SIRLUCAS AI :)")
 
         if self.intent_manager.intents:
+
             print("Intenciones cargadas correctamente")
+
         else:
+
             print("Error al cargar las intenciones")
 
         print("=" * 60)
+
+    # ====================================
+    # Chat principal
+    # ====================================
 
     def chat(self):
 
@@ -118,27 +154,34 @@ class Assistant:
 
             raw_message = input("\nTú > ")
 
-            # ==========================
-            # Salir
-            # ==========================
-
             if raw_message.lower() in [
+
                 "salir",
                 "exit",
                 "quit"
+
             ]:
+
                 self.stop()
+
                 break
 
-            # ==========================
+            # ----------------------------
             # Parser
-            # ==========================
+            # ----------------------------
 
-            message = self.parser.parse(raw_message)
-
-            # ==========================
-            # Actualizar contexto
-            # ==========================
+            message = self.parser.parse(
+                raw_message,
+                self.context
+            )
+            
+            message = self.context_resolver.resolve(
+                message,
+                self.context
+            )
+            # ----------------------------
+            # Contexto
+            # ----------------------------
 
             if isinstance(message, dict):
 
@@ -153,11 +196,12 @@ class Assistant:
                     print("Comando :", self.context.command())
                     print("==============================\n")
 
-            # ==========================
-            # Router / CommandManager
-            # ==========================
+            # ----------------------------
+            # Router
+            # ----------------------------
 
             if self.debug:
+
                 print(">>> Llamando al Router")
 
             if isinstance(message, dict):
@@ -168,35 +212,41 @@ class Assistant:
                     module=message["module"],
                     command=message["command"],
                     topic=message.get("topic")
-                    )
+                )
 
             else:
 
-                response = self.command_manager.execute(message)
+                response = self.command_manager.execute(
+                    message
+                )
 
             if self.debug:
+
                 print(">>> Respuesta:", response)
-                
-                print(">>> Último comando:")
+
+                print(">>> Último comando")
+
                 print(self.history.last())
 
-            # ==========================
+            # ----------------------------
             # IntentManager
-            # ==========================
+            # ----------------------------
 
             if response is None:
 
-                response = self.intent_manager.process(raw_message)
-
-            # ==========================
-            # Respuesta por defecto
-            # ==========================
+                response = self.intent_manager.process(
+                    raw_message
+                )
 
             if response is None:
 
                 response = "Lo siento, todavía estoy aprendiendo."
 
             print(f"\n{self.name} > {response}")
+
+    # ====================================
+    # Salida
+    # ====================================
 
     def stop(self):
 
@@ -219,4 +269,5 @@ class Assistant:
 if __name__ == "__main__":
 
     assistant = Assistant()
+
     assistant.start()

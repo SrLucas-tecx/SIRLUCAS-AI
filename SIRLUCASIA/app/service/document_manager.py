@@ -107,7 +107,7 @@ class DocumentManager:
         if not name:
             return "No especificaste el nombre del documento."
 
-        filepath, extension = self.find_document(name)
+        filepath, extension = self._get_document(name)
 
         if filepath is None:
             return "No encontré ese documento."
@@ -139,17 +139,7 @@ class DocumentManager:
         except Exception as e:
 
             return str(e)
-    # ==================================================
-    # Escribir documento (Sprint 3)
-    # ==================================================
-
-    # ==================================================
-    # Escribir en documento
-    # ==================================================
-
-        # ==================================================
-    # Escribir documento
-    # ==================================================
+    
 
     def write(self, data):
 
@@ -159,7 +149,7 @@ class DocumentManager:
         if not name:
             return "No especificaste el nombre del documento."
 
-        filepath, extension = self.find_document(name)
+        filepath, extension = self._get_document(name)
 
         if filepath is None:
             return "No encontré ese documento."
@@ -206,17 +196,47 @@ class DocumentManager:
     # ==================================================
 
     def find_document(self, name):
-
+        if not name:
+            return None, None
+        
+        if not os.path.exists(self.path):
+            return None, None
+        
         for file in os.listdir(self.path):
-
+            
             filename, extension = os.path.splitext(file)
-
+            
             if filename.lower() == name.lower():
-
-                return os.path.join(self.path, file), extension
-
+                return (
+                    os.path.join(self.path, file),
+                    extension
+                    )
         return None, None
+    
 
+    # ==================================================
+    # Obtener documento (Método privado)
+    # ==================================================
+
+    def _get_document(self, name):
+        if not name:
+            return None, None
+        
+        return self.find_document(name)
+
+
+      # ==================================================
+      # Verificar existencia
+      # ==================================================
+
+    def exists(self, name):
+        filepath, _ = self._get_document(name)
+        
+        return filepath is not None
+    
+    
+
+    
     # ==================================================
     # Eliminar documento
     # ==================================================
@@ -225,7 +245,7 @@ class DocumentManager:
         name = data.get("topic")
         if not name:
             return "No especificaste el nombre del documento."
-        filepath, extension = self.find_document(name)
+        filepath, extension = self._get_document(name)
         
         if filepath is None:
             return "No encontré ese documento."
@@ -247,7 +267,7 @@ class DocumentManager:
         if not old_name or not new_name:
             return "Faltan nombres para renombrar."
         
-        filepath, extension = self.find_document(old_name)
+        filepath, extension = self._get_document(old_name)
         
         if filepath is None:
             return "No encontré ese documento."
@@ -280,7 +300,7 @@ class DocumentManager:
         if not old_name or not new_name:
             return "Faltan nombres para copiar."
         
-        filepath, extension = self.find_document(old_name)
+        filepath, extension = self._get_document(old_name)
 
         if filepath is None:
           return "No encontré ese documento."
@@ -348,7 +368,7 @@ class DocumentManager:
         if not name:
             return "No especificaste el nombre del documento."
     
-        filepath, extension = self.find_document(name)
+        filepath, extension = self._get_document(name)
     
         if filepath is None:
             return "No encontré ese documento."
@@ -382,23 +402,44 @@ class DocumentManager:
     # ==================================================
     
     def open(self, data):
-
+        
         topic = data.get("topic")
-
+        
         if not topic:
             return "No especificaste qué documento abrir."
-
-        filepath, extension = self.find_document(topic)
-
+        
+        filepath, _ = self._get_document(topic)
+        
         if filepath is None:
             return f"No encontré el documento '{topic}'."
-
+        
         try:
-
             os.startfile(filepath)
-
+            
             return f"Abriendo '{os.path.basename(filepath)}'."
-
+        
         except Exception as e:
-
             return f"No pude abrir el documento: {e}"
+    # ==================================================
+    # Cerrar documento
+    # ==================================================
+
+    def close(self, data):
+        
+        topic = data.get("topic")
+        
+        if not topic:
+            return "No especificaste qué documento cerrar."
+        
+        filepath, _ = self._get_document(topic)
+        
+        if filepath is None:
+            
+            return f"No encontré el documento '{topic}'."
+
+          # Windows no permite cerrar cualquier documento
+         # de forma universal.
+
+        return (
+            f"El documento '{topic}' debe cerrarse manualmente."
+            )

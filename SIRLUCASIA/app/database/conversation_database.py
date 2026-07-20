@@ -39,3 +39,7 @@ class ConversationDatabase(BaseDatabase):
                 "Estoy funcionando correctamente."
 
         }
+    
+    def last(self, amount=10):
+        
+        return self.data[-amount:]

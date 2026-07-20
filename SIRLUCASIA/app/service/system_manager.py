@@ -13,38 +13,10 @@ class SystemManager:
     def __init__(self):
 
         self.database=ProgramDatabase
-        self.database = ProgramDatabase()
 
         print("=" * 50)
         print("[SystemManager]")
         print(f"{len(self.database.list())} aplicaciones registradas.")
-        print("=" * 50)
-
-        # Base de datos temporal de aplicaciones.
-        # En el siguiente sprint esto se moverá a ProgramDatabase.
-        self.apps = {
-
-            "bloc de notas": "notepad.exe",
-            "notepad": "notepad.exe",
-
-            "calculadora": "calc.exe",
-            "calc": "calc.exe",
-
-            "explorador": "explorer.exe",
-
-            "paint": "mspaint.exe",
-
-            "vs code": "Code.exe",
-
-            "cmd": "cmd.exe",
-
-            "powershell": "powershell.exe"
-
-        }
-
-        print("=" * 50)
-        print("[SystemManager]")
-        print(f"{len(self.apps)} aplicaciones registradas.")
         print("=" * 50)
 
     # ==================================================
