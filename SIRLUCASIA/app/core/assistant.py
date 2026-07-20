@@ -12,6 +12,10 @@ from app.core.knowledge_manager import KnowledgeManager
 from app.core.web_manager import WebManager
 from app.service.system_manager import SystemManager
 from app.service.document_manager import DocumentManager
+from app.core.calculator_manager import CalculatorManager
+from app.core.conversation_manager import ConversationManager
+from app.core.history_manager import HistoryManager
+
 
 
 
@@ -34,6 +38,7 @@ class Assistant:
         self.memory_manager = MemoryManager()
         self.command_manager = CommandManager(self.memory_manager)
         self.context = ContextManager()
+        self.conversation = ConversationManager()
 
         self.knowledge = KnowledgeManager()
         self.web = WebManager()
@@ -41,6 +46,9 @@ class Assistant:
         self.system = SystemManager()
 
         self.document = DocumentManager()
+
+        self.history=HistoryManager
+
         # ==========================
         # Router
         # ==========================
@@ -66,13 +74,22 @@ class Assistant:
         self.router.register(
             "document",
             self.document)
+        
+        self.router.register(
+            "calculator",
+            CalculatorManager( )
+        )
+        self.router.register(
+            "conversation",
+            self.conversation)
+
+            
+            
         # ==========================
         # Parser
         # ==========================
 
         self.parser = Parser()
-
-
 
 
     def start(self):
@@ -147,12 +164,21 @@ class Assistant:
 
                 response = self.router.route(message)
 
+                self.history.add(
+                    module=message["module"],
+                    command=message["command"],
+                    topic=message.get("topic")
+                    )
+
             else:
 
                 response = self.command_manager.execute(message)
 
             if self.debug:
                 print(">>> Respuesta:", response)
+                
+                print(">>> Último comando:")
+                print(self.history.last())
 
             # ==========================
             # IntentManager

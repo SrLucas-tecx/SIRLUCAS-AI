@@ -10,5 +10,9 @@
     {
         "topic": "linux",
         "answer": "Linux es un sistema operativo de código abierto creado por Linus Torvalds."
+    },
+    {
+    "topic":"inteligencia artificial",
+    "answer":"La Inteligencia Artificial..."
     }
 ]

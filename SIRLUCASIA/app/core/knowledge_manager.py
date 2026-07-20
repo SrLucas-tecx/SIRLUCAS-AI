@@ -1,20 +1,15 @@
-from app.utils.json_manager import JSONManager
+from app.database.knowledge_database import KnowledgeDatabase
 
 
 class KnowledgeManager:
 
     def __init__(self):
 
-        self.knowledge = JSONManager.load(
-            "data/knowledge.json"
-        )
-
-        if self.knowledge is None:
-            self.knowledge = []
+        self.database = KnowledgeDatabase()
 
         print("=" * 50)
         print("[KnowledgeManager]")
-        print(f"{len(self.knowledge)} conocimientos cargados.")
+        print(f"{len(self.database.list())} conocimientos cargados.")
         print("=" * 50)
 
     def execute(self, data):
@@ -33,14 +28,10 @@ class KnowledgeManager:
             return None
 
         return self.search(topic)
-
+    
     def search(self, topic):
-
-        topic = topic.lower()
-
-        for item in self.knowledge:
-
-            if item["topic"] == topic:
-                return item["answer"]
-
-        return "No conozco ese tema todavía."
+        answer = self.database.find(topic)
+        if answer is None:
+            return "No conozco ese tema todavía."
+        
+        return answer

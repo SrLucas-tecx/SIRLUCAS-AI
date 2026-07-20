@@ -328,5 +328,22 @@
     ],
     "command": "info",
     "topic_group": 1
+},
+{
+    "name": "conversacion",
+    "module": "conversation",
+    "priority": 100,
+    "regex": [
+        "^hola$",
+        "^buenos dias$",
+        "^buenas tardes$",
+        "^buenas noches$",
+        "^gracias$",
+        "^adios$",
+        "^quien eres$",
+        "^como estas$"
+    ],
+    "command": "talk",
+    "topic_group": 0
 }
 ]

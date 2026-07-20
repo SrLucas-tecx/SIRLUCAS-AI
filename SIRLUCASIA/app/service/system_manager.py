@@ -1,4 +1,6 @@
 import os
+from app.database.program_database import ProgramDatabase
+
 
 
 # ==================================================
@@ -9,6 +11,14 @@ import os
 class SystemManager:
 
     def __init__(self):
+
+        self.database=ProgramDatabase
+        self.database = ProgramDatabase()
+
+        print("=" * 50)
+        print("[SystemManager]")
+        print(f"{len(self.database.list())} aplicaciones registradas.")
+        print("=" * 50)
 
         # Base de datos temporal de aplicaciones.
         # En el siguiente sprint esto se moverá a ProgramDatabase.
@@ -57,50 +67,51 @@ class SystemManager:
     # ==================================================
     # Abrir aplicación
     # ==================================================
+        
     def open(self, data):
 
-        app = data.get("topic")
+      app = data.get("topic")
+      if not app:
 
-        if not app:
-            return "No especificaste qué aplicación abrir."
-
-        app = app.lower()
-
-        if app not in self.apps:
-            return f"No conozco la aplicación '{app}'."
-
-        try:
-
-            os.system(f'start "" "{self.apps[app]}"')
-
-            return f"Abriendo {app}..."
-
-        except Exception as e:
-
-            return f"No pude abrir {app}: {e}"
-
+        return "No especificaste qué aplicación abrir."
+      
+      app = app.lower()
+      
+      program = self.database.find(app)
+      
+      if program is None:
+        return f"No conozco la aplicación '{app}'."
+      
+      try:
+        os.system(f'start "" "{program}"')
+        
+        return f"Abriendo {app}..."
+      
+      except Exception as e:
+         
+         return f"No pude abrir {app}: {e}"
     # ==================================================
     # Cerrar aplicación
     # ==================================================
+    
     def close(self, data):
-
         app = data.get("topic")
-
+        
         if not app:
             return "No especificaste qué aplicación cerrar."
-
-        app = app.lower()
-
-        if app not in self.apps:
-            return f"No conozco la aplicación '{app}'."
-
-        try:
-
-            os.system(f'taskkill /IM "{self.apps[app]}" /F')
-
-            return f"Cerrando {app}..."
-
-        except Exception as e:
-
-            return f"No pude cerrar {app}: {e}"
         
+        app = app.lower()
+        
+        program = self.database.find(app)
+        
+        if program is None:
+            return f"No conozco la aplicación '{app}'."
+        
+        try:
+            
+            os.system(f'taskkill /IM "{program}" /F')
+            
+            return f"Cerrando {app}..."
+        
+        except Exception as e:
+            return f"No pude cerrar {app}: {e}"

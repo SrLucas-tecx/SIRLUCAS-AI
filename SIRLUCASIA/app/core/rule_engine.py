@@ -46,6 +46,8 @@ class RuleEngine:
                 # topic_group
                 # format_group
                 # content_group
+                # old_name_group
+                # new_name_group
                 # etc.
                 # ======================================
 
@@ -54,15 +56,21 @@ class RuleEngine:
                     if not field.endswith("_group"):
                         continue
 
-                    if group <= match.lastindex:
+                    name = field.replace("_group", "")
 
-                        name = field.replace("_group", "")
+                    # Si existe el grupo, lo captura
+                    if match.lastindex and group <= match.lastindex:
 
                         result[name] = match.group(group).strip()
+
+                    # Si NO existen grupos y el grupo es 0,
+                    # toma toda la coincidencia
+                    elif group == 0:
+
+                        result[name] = match.group(0).strip()
 
                 print(f"[RuleEngine] -> {result}")
 
                 return result
 
         return None
-    
