@@ -1,6 +1,6 @@
 import os
-from app.database.program_database import ProgramDatabase
 
+from app.database.program_database import ProgramDatabase
 
 
 # ==================================================
@@ -12,7 +12,7 @@ class SystemManager:
 
     def __init__(self):
 
-        self.database=ProgramDatabase
+        self.database = ProgramDatabase()
 
         print("=" * 50)
         print("[SystemManager]")
@@ -20,11 +20,9 @@ class SystemManager:
         print("=" * 50)
 
     # ==================================================
-    # Punto de entrada del Router
+    # Router
     # ==================================================
-    # Utiliza despacho dinámico para llamar al método
-    # correspondiente al comando recibido.
-    # ==================================================
+
     def execute(self, data):
 
         command = data.get("command")
@@ -37,53 +35,69 @@ class SystemManager:
         return method(data)
 
     # ==================================================
+    # Verificar existencia
+    # ==================================================
+
+    def exists(self, name):
+
+        if not name:
+            return False
+
+        return self.database.find(name.lower()) is not None
+
+    # ==================================================
     # Abrir aplicación
     # ==================================================
-        
+
     def open(self, data):
 
-      app = data.get("topic")
-      if not app:
+        app = data.get("topic")
 
-        return "No especificaste qué aplicación abrir."
-      
-      app = app.lower()
-      
-      program = self.database.find(app)
-      
-      if program is None:
-        return f"No conozco la aplicación '{app}'."
-      
-      try:
-        os.system(f'start "" "{program}"')
-        
-        return f"Abriendo {app}..."
-      
-      except Exception as e:
-         
-         return f"No pude abrir {app}: {e}"
+        if not app:
+            return "No especificaste qué aplicación abrir."
+
+        app = app.lower()
+
+        program = self.database.find(app)
+
+        if program is None:
+            return f"No conozco la aplicación '{app}'."
+
+        try:
+
+            os.system(f'start "" "{program}"')
+
+            return f"Abriendo {app}..."
+
+        except Exception as e:
+
+            return f"No pude abrir {app}: {e}"
+
     # ==================================================
     # Cerrar aplicación
     # ==================================================
-    
+
     def close(self, data):
+
         app = data.get("topic")
-        
+
         if not app:
             return "No especificaste qué aplicación cerrar."
-        
+
         app = app.lower()
-        
+
         program = self.database.find(app)
-        
+
         if program is None:
             return f"No conozco la aplicación '{app}'."
-        
+
         try:
-            
+
             os.system(f'taskkill /IM "{program}" /F')
-            
+
             return f"Cerrando {app}..."
-        
+
         except Exception as e:
+
             return f"No pude cerrar {app}: {e}"
+        

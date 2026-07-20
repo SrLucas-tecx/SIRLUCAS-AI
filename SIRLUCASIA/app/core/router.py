@@ -4,9 +4,9 @@ class Router:
 
         self.modules = {}
 
-    # ============================================
+    # ==================================================
     # Registrar módulos
-    # ============================================
+    # ==================================================
 
     def register(self, name, module):
 
@@ -14,9 +14,9 @@ class Router:
 
         print(f"[Router] Módulo registrado -> {name.lower()}")
 
-    # ============================================
+    # ==================================================
     # Router principal
-    # ============================================
+    # ==================================================
 
     def route(self, data):
 
@@ -27,7 +27,7 @@ class Router:
         command = data.get("command")
         topic = data.get("topic")
 
-        # Resolver automáticamente OPEN
+        # Resolver OPEN automáticamente
 
         if command == "open":
 
@@ -36,7 +36,7 @@ class Router:
             if response is not None:
                 return response
 
-        # Resolver automáticamente CLOSE
+        # Resolver CLOSE automáticamente
 
         if command == "close":
 
@@ -45,8 +45,6 @@ class Router:
             if response is not None:
                 return response
 
-        # Router normal
-
         manager = self.modules.get(module)
 
         if manager is None:
@@ -54,70 +52,48 @@ class Router:
 
         return manager.execute(data)
 
-    # ============================================
-    # Resolver apertura
-    # ============================================
+    # ==================================================
+    # Resolver OPEN
+    # ==================================================
 
     def _resolve_open(self, topic):
 
-        if not topic:
-            return None
-
         system = self.modules.get("system")
         document = self.modules.get("document")
 
-        # Primero revisar programas
+        if system and system.exists(topic):
 
-        if system:
+            return system.open({
+                "topic": topic
+            })
 
-            if system.database.find(topic):
+        if document and document.exists(topic):
 
-                return system.open({
-                    "topic": topic
-                })
-
-        # Después revisar documentos
-
-        if document:
-
-            if document.exists(topic):
-
-                return document.open({
-                    "topic": topic
-                })
+            return document.open({
+                "topic": topic
+            })
 
         return None
 
-    # ============================================
-    # Resolver cierre
-    # ============================================
+    # ==================================================
+    # Resolver CLOSE
+    # ==================================================
 
     def _resolve_close(self, topic):
-
-        if not topic:
-            return None
 
         system = self.modules.get("system")
         document = self.modules.get("document")
 
-        # Programas
+        if system and system.exists(topic):
 
-        if system:
+            return system.close({
+                "topic": topic
+            })
 
-            if system.database.find(topic):
+        if document and document.exists(topic):
 
-                return system.close({
-                    "topic": topic
-                })
-
-        # Documentos
-
-        if document:
-
-            if document.exists(topic):
-
-                return document.close({
-                    "topic": topic
-                })
+            return document.close({
+                "topic": topic
+            })
 
         return None
