@@ -21,42 +21,109 @@ class ContextManager:
         self.current_module = data.get("module")
         self.current_command = data.get("command")
 
+        # ------------------------------
+        # Guardar último documento
+        # ------------------------------
+
         if self.current_module == "document":
 
             self.last_document = self.current_topic
+
+        # ------------------------------
+        # Guardar último programa
+        # ------------------------------
 
         elif self.current_module == "system":
 
             self.last_program = self.current_topic
 
-        elif self.current_module in ("knowledge", "web"):
+        # ------------------------------
+        # Guardar última búsqueda
+        # ------------------------------
+
+        elif self.current_module in ["knowledge", "web"]:
 
             self.last_search = self.current_topic
 
     # ==========================================
-    # Getters
+    # Turno actual
     # ==========================================
 
     def turn(self):
+
         return self.turn_number
 
+    # ==========================================
+    # Tema actual
+    # ==========================================
+
     def topic(self):
+
         return self.current_topic
 
+    # ==========================================
+    # Módulo actual
+    # ==========================================
+
     def module(self):
+
         return self.current_module
 
+    # ==========================================
+    # Comando actual
+    # ==========================================
+
     def command(self):
+
         return self.current_command
 
+    # ==========================================
+    # Último documento
+    # ==========================================
+
     def document(self):
+
         return self.last_document
 
+    # ==========================================
+    # Último programa
+    # ==========================================
+
     def program(self):
+
         return self.last_program
 
+    # ==========================================
+    # Última búsqueda
+    # ==========================================
+
     def search(self):
+
         return self.last_search
+
+    # ==========================================
+    # ¿Existe documento en contexto?
+    # ==========================================
+
+    def has_document(self):
+
+        return self.last_document is not None
+
+    # ==========================================
+    # ¿Existe programa en contexto?
+    # ==========================================
+
+    def has_program(self):
+
+        return self.last_program is not None
+
+    # ==========================================
+    # ¿Existe búsqueda en contexto?
+    # ==========================================
+
+    def has_search(self):
+
+        return self.last_search is not None
 
     # ==========================================
     # Reiniciar contexto

@@ -57,6 +57,8 @@ class Assistant:
         self.calculator = CalculatorManager()
 
         self.context_resolver = ContextResolver()
+
+        self.memory = MemoryManager()
         
 
         # ====================================
@@ -103,6 +105,10 @@ class Assistant:
         self.router.register(
             "history",
             self.history
+        )
+        self.router.register(
+            "memory",
+            self.memory
         )
 
         # ====================================

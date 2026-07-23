@@ -26,7 +26,60 @@ class DocumentManager:
         print("[DocumentManager]")
         print("Inicializado correctamente.")
         print("=" * 50)
+    # ==================================================
+    # Traductor de formatos
+    # ==================================================
+    
+    def _normalize_format(self, format_name):
+        
+        if not format_name:
+            
+            return "docx"
+        
+        format_name = format_name.lower().strip()
+        
+        aliases = {
 
+        # Word
+        "documento": "docx",
+        "word": "docx",
+        "doc": "docx",
+        "docx": "docx",
+
+        # Texto
+        "txt": "txt",
+        "texto": "txt",
+        "nota": "txt",
+        "nota de texto": "txt",
+        "bloc": "txt",
+        "bloc de notas": "txt",
+        "notepad": "txt",
+
+        # PDF
+        "pdf": "pdf",
+
+        # Excel
+        "excel": "xlsx",
+        "xlsx": "xlsx",
+        "hoja": "xlsx",
+        "hoja de calculo": "xlsx",
+
+        # PowerPoint
+        "powerpoint": "pptx",
+        "power point": "pptx",
+        "ppt": "pptx",
+        "pptx": "pptx",
+        "presentacion": "pptx",
+        "presentación": "pptx",
+
+        # JSON
+        "json": "json",
+
+        # Markdown
+        "markdown": "md",
+        "md": "md"
+    }
+        return aliases.get(format_name, "docx")
     # ==================================================
     # Router
     # ==================================================
@@ -426,20 +479,17 @@ class DocumentManager:
 
     def close(self, data):
         
-        topic = data.get("topic")
+        app = data.get("topic")
         
-        if not topic:
-            return "No especificaste qué documento cerrar."
-        
-        filepath, _ = self._get_document(topic)
-        
-        if filepath is None:
+        if not app:
+            return "No especificaste qué aplicación cerrar."
             
-            return f"No encontré el documento '{topic}'."
+        if self.database.find(app.lower()) is None:
+            
+            return f"No conozco la aplicación '{app}'."
 
-          # Windows no permite cerrar cualquier documento
-         # de forma universal.
 
         return (
-            f"El documento '{topic}' debe cerrarse manualmente."
+             f"Por el momento '{app}' debe cerrarse manualmente.\n"
+            "El cierre automático llegará en una próxima versión."
             )

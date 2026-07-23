@@ -93,9 +93,13 @@ class SystemManager:
 
         try:
 
-            os.system(f'taskkill /IM "{program}" /F')
+            result=os.system(f'taskkill /IM "{program}" /F')
 
-            return f"Cerrando {app}..."
+            if result == 0:
+              return f"{app} cerrado correctamente."
+            
+
+            return f"{app} no estaba abierto."
 
         except Exception as e:
 

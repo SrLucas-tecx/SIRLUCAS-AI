@@ -27,7 +27,7 @@ class Router:
         command = data.get("command")
         topic = data.get("topic")
 
-        # Resolver OPEN automáticamente
+        # Resolver OPEN
 
         if command == "open":
 
@@ -36,7 +36,7 @@ class Router:
             if response is not None:
                 return response
 
-        # Resolver CLOSE automáticamente
+        # Resolver CLOSE
 
         if command == "close":
 
@@ -50,7 +50,14 @@ class Router:
         if manager is None:
             return f"No existe el módulo '{module}'."
 
-        return manager.execute(data)
+        response = manager.execute(data)
+
+        memory = self.modules.get("memory")
+
+        if memory:
+            memory.remember(data)
+
+        return response
 
     # ==================================================
     # Resolver OPEN
@@ -61,17 +68,23 @@ class Router:
         system = self.modules.get("system")
         document = self.modules.get("document")
 
-        if system and system.exists(topic):
+        if system:
 
-            return system.open({
-                "topic": topic
-            })
+            program = system.database.find(topic)
 
-        if document and document.exists(topic):
+            if program:
 
-            return document.open({
-                "topic": topic
-            })
+                return system.open({
+                    "topic": topic
+                })
+
+        if document:
+
+            if document.exists(topic):
+
+                return document.open({
+                    "topic": topic
+                })
 
         return None
 
@@ -84,16 +97,22 @@ class Router:
         system = self.modules.get("system")
         document = self.modules.get("document")
 
-        if system and system.exists(topic):
+        if system:
 
-            return system.close({
-                "topic": topic
-            })
+            program = system.database.find(topic)
 
-        if document and document.exists(topic):
+            if program:
 
-            return document.close({
-                "topic": topic
-            })
+                return system.close({
+                    "topic": topic
+                })
+
+        if document:
+
+            if document.exists(topic):
+
+                return document.close({
+                    "topic": topic
+                })
 
         return None
