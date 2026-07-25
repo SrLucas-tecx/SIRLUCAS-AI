@@ -1,3 +1,5 @@
+from app.core.context_stack import ContextStack
+
 # ==================================================
 # ContextManager
 # Guarda el contexto de la conversación
@@ -6,137 +8,123 @@
 class ContextManager:
 
     def __init__(self):
-
         self.clear()
 
     # ==========================================
     # Actualizar contexto
     # ==========================================
-
     def update(self, data):
-
         self.turn_number += 1
 
         self.current_topic = data.get("topic")
         self.current_module = data.get("module")
         self.current_command = data.get("command")
 
-        # ------------------------------
-        # Guardar último documento
-        # ------------------------------
+        module = self.current_module
+        topic = self.current_topic
 
-        if self.current_module == "document":
+        # ===============================
+        # Programas
+        # ===============================
+        if module == "system" and topic:
+            self.current_program = topic
+            self.stack.push_program(topic)
 
-            self.last_document = self.current_topic
+        # ===============================
+        # Documentos
+        # ===============================
+        elif module == "document" and topic:
+            self.current_document = topic
+            self.stack.push_document(topic)
 
-        # ------------------------------
-        # Guardar último programa
-        # ------------------------------
+        # ===============================
+        # Búsquedas
+        # ===============================
+        elif module in ("knowledge", "web") and topic:
+            self.current_search = topic
+            self.stack.push_search(topic)
 
-        elif self.current_module == "system":
-
-            self.last_program = self.current_topic
-
-        # ------------------------------
-        # Guardar última búsqueda
-        # ------------------------------
-
-        elif self.current_module in ["knowledge", "web"]:
-
-            self.last_search = self.current_topic
+        # ===============================
+        # DEBUG
+        # ===============================
+        print("\n========== CONTEXT STACK ==========")
+        print("Programas :", self.stack.programs)
+        print("Documentos:", self.stack.documents)
+        print("Búsquedas :", self.stack.searches)
+        print("===================================\n")
 
     # ==========================================
     # Turno actual
     # ==========================================
-
     def turn(self):
-
         return self.turn_number
 
     # ==========================================
     # Tema actual
     # ==========================================
-
     def topic(self):
-
         return self.current_topic
 
     # ==========================================
     # Módulo actual
     # ==========================================
-
     def module(self):
-
         return self.current_module
 
     # ==========================================
     # Comando actual
     # ==========================================
-
     def command(self):
-
         return self.current_command
 
     # ==========================================
     # Último documento
     # ==========================================
-
     def document(self):
-
-        return self.last_document
+        return self.current_document
 
     # ==========================================
     # Último programa
     # ==========================================
-
     def program(self):
-
-        return self.last_program
+        return self.current_program
 
     # ==========================================
     # Última búsqueda
     # ==========================================
-
     def search(self):
-
-        return self.last_search
+        return self.current_search
 
     # ==========================================
     # ¿Existe documento en contexto?
     # ==========================================
-
     def has_document(self):
-
-        return self.last_document is not None
+        return self.current_document is not None
 
     # ==========================================
     # ¿Existe programa en contexto?
     # ==========================================
-
     def has_program(self):
-
-        return self.last_program is not None
+        return self.current_program is not None
 
     # ==========================================
     # ¿Existe búsqueda en contexto?
     # ==========================================
-
     def has_search(self):
-
-        return self.last_search is not None
+        return self.current_search is not None
 
     # ==========================================
     # Reiniciar contexto
     # ==========================================
-
     def clear(self):
-
         self.turn_number = 0
 
         self.current_topic = None
         self.current_module = None
         self.current_command = None
 
-        self.last_document = None
-        self.last_program = None
-        self.last_search = None
+        self.current_document = None
+        self.current_program = None
+        self.current_search = None
+
+        self.stack = ContextStack()

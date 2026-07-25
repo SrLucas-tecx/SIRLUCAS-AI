@@ -13,24 +13,11 @@ class DocumentDatabase(BaseDatabase):
 
         self.data = {
 
-            "txt": ".txt",
-            "texto": ".txt",
-
-            "word": ".docx",
-            "doc": ".docx",
-            "docx": ".docx",
-
-            "pdf": ".pdf",
-
-            "excel": ".xlsx",
-            "xlsx": ".xlsx",
-
-            "ppt": ".pptx",
-            "powerpoint": ".pptx",
-
-            "json": ".json",
-
-            "markdown": ".md",
-            "md": ".md"
-
-        }
+        "docx": ".docx",
+        "txt": ".txt",
+        "pdf": ".pdf",
+        "xlsx": ".xlsx",
+        "pptx": ".pptx",
+        "json": ".json",
+        "md": ".md"
+    }

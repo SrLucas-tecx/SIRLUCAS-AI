@@ -1,0 +1,62 @@
+{
+    "verbs": {
+
+        "abrir": [
+            "abre",
+            "abrir",
+            "ejecuta",
+            "inicia",
+            "lanza",
+            "usar",
+            "utiliza"
+        ],
+
+        "crear": [
+            "crear",
+            "crea",
+            "genera",
+            "haz"
+        ],
+
+        "cerrar": [
+            "cierra",
+            "cerrar",
+            "termina",
+            "finaliza"
+        ]
+    },
+
+    "apps": {
+
+        "chrome":[
+            "chrome",
+            "navegador",
+            "google"
+        ],
+
+        "word":[
+            "word",
+            "documento de word",
+            "procesador de texto"
+        ],
+
+        "excel":[
+            "excel",
+            "hoja de cálculo",
+            "hoja de calculo"
+        ]
+    },
+
+    "noise":[
+
+        "por favor",
+        "podrias",
+        "podrías",
+        "quisiera",
+        "quiero",
+        "necesito",
+        "me ayudas",
+        "puedes"
+
+    ]
+}
