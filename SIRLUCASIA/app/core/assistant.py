@@ -15,6 +15,10 @@ from app.service.system_manager import SystemManager
 from app.service.document_manager import DocumentManager
 from app.core.context_resolver import ContextResolver
 from app.resolvers import ReferenceResolver
+from app.core.entity_resolver import EntityResolver
+from app.core.action_planner import ActionPlanner
+from app.core.intent_resolver import IntentResolver
+from app.core.task_executor import TaskExecutor   # 👈 agregado
 
 
 class Assistant:
@@ -33,6 +37,9 @@ class Assistant:
         self.context = ContextManager()
         self.reference_resolver = ReferenceResolver(self.context)
         self.context_resolver = ContextResolver()
+        self.entity_resolver = EntityResolver()
+        self.action_planner = ActionPlanner()
+        self.intent_resolver = IntentResolver()
         self.conversation = ConversationManager()
         self.history = HistoryManager()
         self.knowledge = KnowledgeManager()
@@ -53,6 +60,9 @@ class Assistant:
         self.router.register("calculator", self.calculator)
         self.router.register("conversation", self.conversation)
         self.router.register("history", self.history)
+
+        # Executor 👇 nuevo
+        self.executor = TaskExecutor(self.router, self.history)
 
         # Parser
         self.parser = Parser()
@@ -98,8 +108,10 @@ class Assistant:
             message = self.parser.parse(raw_message, self.context)
 
             if isinstance(message, dict):
+                message = self.entity_resolver.resolve(message)
                 message = self.reference_resolver.resolve(message)
                 message = self.context_resolver.resolve(message, self.context)
+                message = self.intent_resolver.resolve(message)
                 self.context.update(message)
 
                 if self.debug:
@@ -108,21 +120,20 @@ class Assistant:
                     print("Tema    :", self.context.topic())
                     print("Módulo  :", self.context.module())
                     print("Comando :", self.context.command())
+                    print("Entidad :", message.get("entity"))
                     print("==============================\n")
 
             # ----------------------------
-            # Router
+            # ActionPlanner + Executor
             # ----------------------------
             if self.debug:
-                print(">>> Llamando al Router")
+                print(">>> Planificando acciones")
 
+            response = None
             if isinstance(message, dict):
-                response = self.router.route(message)
-                self.history.add(
-                    module=message["module"],
-                    command=message["command"],
-                    topic=message.get("topic")
-                )
+                actions = self.action_planner.plan(message)
+                responses = self.executor.execute(actions)   # 👈 nuevo flujo
+                response = responses[-1] if responses else None
             else:
                 response = self.command_manager.execute(message)
 
@@ -140,7 +151,11 @@ class Assistant:
             if response is None:
                 response = "Lo siento, todavía estoy aprendiendo."
 
-            print(f"\n{self.name} > {response}")
+            # 👇 Ahora imprime el mensaje del ActionResult
+            if hasattr(response, "message"):
+                print(f"\n{self.name} > {response.message}")
+            else:
+                print(f"\n{self.name} > {response}")
 
     # ====================================
     # Salida
