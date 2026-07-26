@@ -1,5 +1,6 @@
 import subprocess
 from app.database.program_database import ProgramDatabase
+from app.core.action_result import ActionResult, ActionStatus
 
 # ==================================================
 # SystemManager
@@ -10,7 +11,6 @@ class SystemManager:
 
     def __init__(self):
         self.database = ProgramDatabase()
-        self.last_program = None  # Guardar último programa abierto
 
         print("=" * 50)
         print("[SystemManager]")
@@ -25,7 +25,13 @@ class SystemManager:
         method = getattr(self, command, None)
 
         if method is None:
-            return f"No existe la acción '{command}'."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="system",
+                command=command,
+                message=f"No existe la acción '{command}'."
+            )
 
         return method(data)
 
@@ -35,7 +41,7 @@ class SystemManager:
     def exists(self, name):
         if not name:
             return False
-        return self.database.find(name) is not None  # Normalización la hace ProgramDatabase
+        return self.database.find(name) is not None
 
     # ==================================================
     # Abrir aplicación
@@ -44,19 +50,44 @@ class SystemManager:
         app = data.get("topic")
 
         if not app:
-            return "No especificaste qué aplicación abrir."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="system",
+                command="open",
+                message="No especificaste qué aplicación abrir."
+            )
 
         program = self.database.find(app)
 
         if program is None:
-            return f"No conozco la aplicación '{app}'."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="system",
+                command="open",
+                message=f"No conozco la aplicación '{app}'."
+            )
 
         try:
-            subprocess.Popen(program)  # abre sin bloquear
-            self.last_program = app   # guardar último programa
-            return f"Abriendo {app}..."
+            subprocess.Popen(program)
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="system",
+                command="open",
+                message=f"Abriendo {app}...",
+                data={"program": app}
+            )
         except Exception as e:
-            return f"No pude abrir {app}: {e}"
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="system",
+                command="open",
+                message=f"No pude abrir {app}.",
+                error=str(e)
+            )
 
     # ==================================================
     # Cerrar aplicación
@@ -65,12 +96,24 @@ class SystemManager:
         app = data.get("topic")
 
         if not app:
-            return "No especificaste qué aplicación cerrar."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="system",
+                command="close",
+                message="No especificaste qué aplicación cerrar."
+            )
 
         program = self.database.find(app)
 
         if program is None:
-            return f"No conozco la aplicación '{app}'."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="system",
+                command="close",
+                message=f"No conozco la aplicación '{app}'."
+            )
 
         try:
             result = subprocess.run(
@@ -80,12 +123,31 @@ class SystemManager:
             )
 
             if result.returncode == 0:
-                return f"{app} cerrado correctamente."
+                return ActionResult(
+                    success=True,
+                    status=ActionStatus.SUCCESS,
+                    module="system",
+                    command="close",
+                    message=f"{app} cerrado correctamente."
+                )
 
-            # Mostrar error real de Windows si existe
-            return result.stderr.strip() or f"No pude cerrar {app}."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="system",
+                command="close",
+                message=f"No pude cerrar {app}.",
+                error=result.stderr.strip()
+            )
         except Exception as e:
-            return f"No pude cerrar {app}: {e}"
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="system",
+                command="close",
+                message=f"No pude cerrar {app}.",
+                error=str(e)
+            )
 
     # ==================================================
     # Reiniciar aplicación
@@ -94,12 +156,20 @@ class SystemManager:
         app = data.get("topic")
 
         if not app:
-            return "No especificaste qué aplicación reiniciar."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="system",
+                command="restart",
+                message="No especificaste qué aplicación reiniciar."
+            )
 
-        self.close(data)
-        self.open(data)
+        close_result = self.close(data)
+        if not close_result.success:   # 👈 ahora usamos success
+            return close_result
 
-        return f"Reiniciando {app}..."
+        open_result = self.open(data)
+        return open_result
 
     # ==================================================
     # Verificar si está abierto

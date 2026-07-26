@@ -1,50 +1,55 @@
+from app.core.action_result import ActionResult
+from app.core.action_status import ActionStatus
 from app.database.calculator_database import CalculatorDatabase
-
 
 class CalculatorManager:
 
     def __init__(self):
-
         self.database = CalculatorDatabase()
-
         print("=" * 50)
         print("[CalculatorManager]")
         print("Inicializado correctamente.")
         print("=" * 50)
 
-    # =====================================
-    # Dispatcher
-    # =====================================
-
     def execute(self, data):
-
         command = data.get("command")
-
         method = getattr(self, command, None)
-
         if method is None:
-            return f"No existe el comando '{command}'."
-
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="calculator",
+                command=command,
+                message=f"No existe la acción '{command}'."
+            )
         return method(data)
 
-    # =====================================
-    # Calcular
-    # =====================================
-
     def calculate(self, data):
-
         expression = data.get("topic")
-
         if not expression:
-            return "No especificaste una operación."
-
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="calculator",
+                command="calculate",
+                message="No especificaste una operación."
+            )
         try:
-
             result = eval(expression)
-
-            return f"Resultado: {result}"
-
-        except Exception:
-
-            return "No pude calcular esa operación."
-        
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="calculator",
+                command="calculate",
+                message=f"Resultado: {result}",
+                data=result
+            )
+        except Exception as e:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="calculator",
+                command="calculate",
+                message="No pude calcular esa operación.",
+                error=str(e)
+            )

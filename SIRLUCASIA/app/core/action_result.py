@@ -1,33 +1,25 @@
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
+
+from app.core.action_status import ActionStatus
+
+
+@dataclass
 class ActionResult:
 
-    def __init__(
+    success: bool
 
-        self,
+    status: ActionStatus
 
-        success,
+    message: str
 
-        message,
+    module: str | None = None
 
-        data=None
+    command: str | None = None
 
-    ):
+    data: Any = None
 
-        self.success=success
+    error: str | None = None
 
-        self.message=message
-
-        self.data=data or {}
-
-    def __bool__(self):
-
-        return self.success
-
-    def __repr__(self):
-
-        return(
-
-            f"<ActionResult "
-
-            f"success={self.success}>"
-
-        )
+    timestamp: datetime = field(default_factory=datetime.now)

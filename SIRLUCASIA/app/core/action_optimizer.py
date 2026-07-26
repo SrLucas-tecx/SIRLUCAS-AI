@@ -2,6 +2,9 @@ class ActionOptimizer:
 
     def optimize(self, actions, context):
 
+        if not actions:
+            return []
+
         optimized = []
 
         for action in actions:
@@ -9,17 +12,19 @@ class ActionOptimizer:
             # ----------------------------
             # DOCUMENTOS
             # ----------------------------
+
             if action.module == "document":
 
                 if not action.topic:
                     action.topic = context.document()
 
-                if action.command == "write" and not action.content:
+                if action.command == "write" and not getattr(action, "content", None):
                     continue
 
             # ----------------------------
             # SISTEMA
             # ----------------------------
+
             elif action.module == "system":
 
                 if not action.topic:
@@ -28,6 +33,7 @@ class ActionOptimizer:
             # ----------------------------
             # WEB
             # ----------------------------
+
             elif action.module == "web":
 
                 if not action.topic:
