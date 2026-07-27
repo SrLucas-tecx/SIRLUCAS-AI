@@ -12,4 +12,3 @@ class LoggerLevel(Enum):
     ERROR = "ERROR"
 
     CRITICAL = "CRITICAL"
-    

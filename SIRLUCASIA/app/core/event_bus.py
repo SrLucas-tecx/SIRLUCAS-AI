@@ -1,14 +1,16 @@
+from collections import defaultdict
+
+
 class EventBus:
 
     def __init__(self):
 
-        self.listeners = {}
+        self.listeners = defaultdict(list)
 
     def subscribe(self, event, callback):
 
-        if event not in self.listeners:
-
-            self.listeners[event] = []
+        if not callable(callback):
+            raise ValueError("El callback debe ser una función.")
 
         self.listeners[event].append(callback)
 
@@ -16,7 +18,13 @@ class EventBus:
 
         if event in self.listeners:
 
-            self.listeners[event].remove(callback)
+            try:
+
+                self.listeners[event].remove(callback)
+
+            except ValueError:
+
+                pass
 
     def publish(self, event, data=None):
 
@@ -24,6 +32,24 @@ class EventBus:
 
             return
 
-        for callback in self.listeners[event]:
+        for callback in list(self.listeners[event]):
 
-            callback(data)
+            try:
+
+                callback(data)
+
+            except Exception as e:
+
+                print(f"[EventBus] Error en '{event}': {e}")
+
+    def clear(self):
+
+        self.listeners.clear()
+
+    def events(self):
+
+        return list(self.listeners.keys())
+
+    def has_subscribers(self, event):
+
+        return len(self.listeners[event]) > 0
