@@ -1,34 +1,81 @@
 from app.core.event_bus import EventBus
 
 
-def test_subscribe_publish():
+def test_subscribe():
 
     bus = EventBus()
 
-    received = []
+    called = []
 
     def callback(data):
+        called.append(data)
 
-        received.append(data)
+    bus.subscribe("test", callback)
 
-    bus.subscribe(
+    bus.publish("test", 10)
 
-        "test",
+    assert called == [10]
 
-        callback
 
-    )
+def test_unsubscribe():
 
-    bus.publish(
+    bus = EventBus()
 
-        "test",
+    called = []
 
-        {"value": 10}
+    def callback(data):
+        called.append(data)
 
-    )
+    bus.subscribe("test", callback)
 
-    assert received == [
+    bus.unsubscribe("test", callback)
 
-        {"value": 10}
+    bus.publish("test", 100)
 
-    ]
+    assert called == []
+
+
+def test_multiple_listeners():
+
+    bus = EventBus()
+
+    result = []
+
+    bus.subscribe("event", lambda d: result.append(1))
+    bus.subscribe("event", lambda d: result.append(2))
+    bus.subscribe("event", lambda d: result.append(3))
+
+    bus.publish("event")
+
+    assert result == [1, 2, 3]
+
+
+def test_clear():
+
+    bus = EventBus()
+
+    bus.subscribe("event", lambda d: None)
+
+    bus.clear()
+
+    assert bus.events() == []
+
+
+def test_has_subscribers():
+
+    bus = EventBus()
+
+    assert bus.has_subscribers("x") is False
+
+    bus.subscribe("x", lambda d: None)
+
+    assert bus.has_subscribers("x") is True
+
+
+def test_publish_without_listeners():
+
+    bus = EventBus()
+
+    bus.publish("nothing")
+
+    assert True

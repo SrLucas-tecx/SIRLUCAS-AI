@@ -6,7 +6,6 @@ from app.database.history_database import HistoryDatabase
 class HistoryManager:
 
     def __init__(self):
-
         self.database = HistoryDatabase()
 
     # ===============================
@@ -22,7 +21,7 @@ class HistoryManager:
         if method is None:
             return None
 
-        return method(data)
+        return method()
 
     # ===============================
     # Registrar comando

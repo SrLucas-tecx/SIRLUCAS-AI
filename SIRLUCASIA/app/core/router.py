@@ -1,49 +1,38 @@
 class Router:
 
     def __init__(self):
-
         self.modules = {}
 
-    # ==================================================
-    # Registrar módulos
-    # ==================================================
-
     def register(self, name, module):
-
         self.modules[name.lower()] = module
-
         print(f"[Router] Módulo registrado -> {name.lower()}")
-
-    # ==================================================
-    # Router principal
-    # ==================================================
 
     def route(self, data):
 
         if not isinstance(data, dict):
-            return None
+            return "Datos inválidos: se esperaba un diccionario."
 
-        module = data.get("module", "").lower()
         command = data.get("command")
         topic = data.get("topic")
 
-        # Resolver OPEN
-
+        # ---------- OPEN ----------
         if command == "open":
-
             response = self._resolve_open(topic)
 
             if response is not None:
                 return response
 
-        # Resolver CLOSE
-
+        # ---------- CLOSE ----------
         if command == "close":
-
             response = self._resolve_close(topic)
 
             if response is not None:
                 return response
+
+        module = data.get("module", "").lower()
+
+        if not module:
+            return "No se especificó el módulo."
 
         manager = self.modules.get(module)
 
@@ -55,11 +44,13 @@ class Router:
         memory = self.modules.get("memory")
 
         if memory:
-            memory.remember(data)
+            try:
+                memory.remember(data)
+            except Exception as e:
+                print(f"[Router] Error en memory.remember: {e}")
 
         return response
-
-    # ==================================================
+        # ==================================================
     # Resolver OPEN
     # ==================================================
 

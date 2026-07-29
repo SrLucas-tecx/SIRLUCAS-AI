@@ -1,6 +1,4 @@
 import random
-
-from app.core.intent_manager import IntentManager
 from app.core.memory_manager import MemoryManager
 from app.core.command_manager import CommandManager
 from app.modules.parser import Parser
@@ -33,9 +31,9 @@ class Assistant:
     def __init__(self):
         self.name = "SIRLUCAS AI"
         self.version = "0.1"
+        self.debug = True
 
         # Managers principales
-        self.intent_manager = IntentManager()
         self.memory = MemoryManager()
         self.command_manager = CommandManager(self.memory)
         self.context = ContextManager()
@@ -56,15 +54,17 @@ class Assistant:
         self.router.register("calculator", self.calculator)
         self.router.register("history", self.history)
 
-        # EventBus + Listeners
+        # EventBus + Listeners (instancias persistentes)
         self.event_bus = EventBus()
-        self.event_bus.subscribe("action.executed", LoggerListener().handle)
+        self.logger_listener = LoggerListener()
+        self.metrics_listener = MetricsListener()
+        self.history_listener = HistoryListener(self.history)
+        self.ai_listener = AIListener()
 
-        self.metrics = MetricsListener()   # 👈 instancia persistente
-        self.event_bus.subscribe("action.executed", self.metrics.handle)
-
-        self.event_bus.subscribe("action.executed", HistoryListener(self.history).handle)
-        self.event_bus.subscribe("action.executed", AIListener().handle)
+        self.event_bus.subscribe("action.executed", self.logger_listener.handle)
+        self.event_bus.subscribe("action.executed", self.metrics_listener.handle)
+        self.event_bus.subscribe("action.executed", self.history_listener.handle)
+        self.event_bus.subscribe("action.executed", self.ai_listener.handle)
 
         # Componentes del Pipeline
         self.entity_resolver = EntityResolver()
@@ -120,14 +120,10 @@ class Assistant:
 
             # Ejemplo: mostrar métricas en debug
             if self.debug:
-                print("[Metrics]", self.metrics.summary())
+                print("[Metrics]", self.metrics_listener.summary())
 
     def stop(self):
-        despedida = self.intent_manager.get_by_tag("despedida")
-        if despedida:
-            print(f"\n{self.name} > {random.choice(despedida['responses'])}")
-        else:
-            print(f"\n{self.name} > Hasta luego.")
+        print(f"\n{self.name} > Hasta luego.")
 
 
 if __name__ == "__main__":
