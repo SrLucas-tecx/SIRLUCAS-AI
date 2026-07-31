@@ -1,6 +1,7 @@
 import subprocess
 from app.database.program_database import ProgramDatabase
-from app.core.action_result import ActionResult, ActionStatus
+from app.core.action_result import ActionResult
+from app.core.action_status import ActionStatus
 
 # ==================================================
 # SystemManager
