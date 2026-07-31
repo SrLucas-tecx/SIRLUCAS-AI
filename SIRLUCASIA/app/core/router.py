@@ -18,18 +18,17 @@ class Router:
         # ---------- OPEN ----------
         if command == "open":
             response = self._resolve_open(topic)
-
             if response is not None:
                 return response
 
         # ---------- CLOSE ----------
         if command == "close":
             response = self._resolve_close(topic)
-
             if response is not None:
                 return response
 
-        module = data.get("module", "").lower()
+        # ← CORREGIDO
+        module = (data.get("module") or "").lower()
 
         if not module:
             return "No se especificó el módulo."
@@ -42,7 +41,6 @@ class Router:
         response = manager.execute(data)
 
         memory = self.modules.get("memory")
-
         if memory:
             try:
                 memory.remember(data)
@@ -50,60 +48,39 @@ class Router:
                 print(f"[Router] Error en memory.remember: {e}")
 
         return response
-        # ==================================================
+
+    # ==================================================
     # Resolver OPEN
     # ==================================================
-
     def _resolve_open(self, topic):
-
         system = self.modules.get("system")
         document = self.modules.get("document")
 
         if system:
-
             program = system.database.find(topic)
-
             if program:
-
-                return system.open({
-                    "topic": topic
-                })
+                return system.open({"topic": topic})
 
         if document:
-
             if document.exists(topic):
-
-                return document.open({
-                    "topic": topic
-                })
+                return document.open({"topic": topic})
 
         return None
 
     # ==================================================
     # Resolver CLOSE
     # ==================================================
-
     def _resolve_close(self, topic):
-
         system = self.modules.get("system")
         document = self.modules.get("document")
 
         if system:
-
             program = system.database.find(topic)
-
             if program:
-
-                return system.close({
-                    "topic": topic
-                })
+                return system.close({"topic": topic})
 
         if document:
-
             if document.exists(topic):
-
-                return document.close({
-                    "topic": topic
-                })
+                return document.close({"topic": topic})
 
         return None
