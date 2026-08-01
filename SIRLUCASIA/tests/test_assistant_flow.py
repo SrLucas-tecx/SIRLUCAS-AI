@@ -9,20 +9,16 @@ from app.core.web_manager import WebManager
 
 
 def crear_router():
-
     router = Router()
-
     router.register("memory", MemoryManager())
     router.register("document", DocumentManager())
     router.register("system", SystemManager())
     router.register("knowledge", KnowledgeManager())
     router.register("web", WebManager())
-
     return router
 
 
 def test_crear_documento():
-
     parser = Parser()
     router = crear_router()
 
@@ -32,11 +28,11 @@ def test_crear_documento():
 
     respuesta = router.route(comando)
 
-    assert "creado" in respuesta.lower()
+    assert respuesta.success is True
+    assert "creado" in respuesta.message.lower()
 
 
 def test_guardar_memoria():
-
     parser = Parser()
     router = crear_router()
 
@@ -45,10 +41,10 @@ def test_guardar_memoria():
     respuesta = router.route(comando)
 
     assert respuesta is not None
+    assert respuesta.success is True
 
 
 def test_recordar_memoria():
-
     parser = Parser()
     router = crear_router()
 
@@ -58,4 +54,5 @@ def test_recordar_memoria():
         parser.parse("como me llamo")
     )
 
-    assert respuesta.lower() == "juan"
+    assert respuesta.success is True
+    assert respuesta.message.lower() == "juan"

@@ -9,15 +9,23 @@ class DocumentDatabase(BaseDatabase):
 
     def __init__(self):
 
-        super().__init__()
-
         self.data = {
 
+        "word": ".docx",
         "docx": ".docx",
-        "txt": ".txt",
-        "pdf": ".pdf",
+
+        "excel": ".xlsx",
         "xlsx": ".xlsx",
+
+        "powerpoint": ".pptx",
         "pptx": ".pptx",
+
+        "pdf": ".pdf",
+
+        "txt": ".txt",
+
         "json": ".json",
+
+        "markdown": ".md",
         "md": ".md"
-    }
+}
