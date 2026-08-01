@@ -5,7 +5,7 @@ def test_system_exists():
 
     system = SystemManager()
 
-    assert "notepad" in system.apps
+    assert system.exists("notepad") is True
 
 
 def test_unknown_program():
@@ -16,4 +16,5 @@ def test_unknown_program():
         "topic": "programa_inexistente"
     })
 
-    assert "No conozco" in response
+    assert response.success is False
+    assert "No conozco" in response.message
