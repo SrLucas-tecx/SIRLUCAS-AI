@@ -1,5 +1,7 @@
+from fileinput import filename
 import os
 import shutil
+import re 
 from datetime import datetime
 
 from app.database.document_database import DocumentDatabase
@@ -44,7 +46,7 @@ class DocumentManager:
             "json": "json",
             "markdown": "md", "md": "md"
         }
-        return aliases.get(format_name, "docx")
+        return aliases.get(format_name)#, "docx"#)
 
     # ==================================================
     # Router
@@ -63,33 +65,79 @@ class DocumentManager:
             )
 
         return method(data)
-
     # ==================================================
     # Crear documento
     # ==================================================
+    # ==================================================
+
     def create(self, data):
         name = data.get("topic")
         if not name:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "create", 
-                                "No especificaste el nombre del documento.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="create",
+                message="No especificaste el nombre del documento."
+            )
 
-        format_name = self._normalize_format(data.get("format"))
-        extension = self.database.find(format_name)
-        if extension is None:
-            extension = ".docx"
+        # Validar nombre
+        if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="create",
+                message="El nombre del documento es inválido."
+            )
 
+        # Validar contenido
         content = data.get("content", "")
+        if not content.strip():
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="create",
+                message="El contenido no puede estar vacío."
+            )
+
+        # Validar formato
+        format_name = self._normalize_format(data.get("format"))
+        if not format_name:  # si no se reconoce el formato
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="create",
+                message="Formato no soportado."
+            )
+
+        extension = self.database.find(format_name)
+        valid_extensions = [".docx", ".txt", ".pdf", ".xlsx", ".pptx", ".json", ".md"]
+        if extension not in valid_extensions:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="create",
+                message="Formato no soportado."
+            )
+
         filename = f"{name}{extension}"
         filepath = os.path.join(self.path, filename)
 
+        # Validar duplicado
         if os.path.exists(filepath):
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "create", 
-                                f"El documento '{filename}' ya existe.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="create",
+                message=f"El documento '{filename}' ya existe."
+            )
 
+        # Crear documento
         try:
             DocumentFactory.create(extension, filepath, content)
             return ActionResult(
@@ -101,11 +149,16 @@ class DocumentManager:
                 data={"filename": filename}
             )
         except Exception as e:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", 
-                                "create",
-                                  f"No pude crear el documento: {e}")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="create",
+                message=f"No pude crear el documento: {e}"
+            )
+
+
+
 
     # ==================================================
     # Leer documento
@@ -131,11 +184,16 @@ class DocumentManager:
             if extension in [".txt", ".md", ".json"]:
                 with open(filepath, "r", encoding="utf-8") as file:
                     content = file.read()
+
             elif extension == ".docx":
+
                 from docx import Document
                 doc = Document(filepath)
+
                 content = "\n".join(p.text for p in doc.paragraphs)
+
             elif extension == ".pdf":
+
                 return ActionResult(False, 
                                     ActionStatus.WARNING, 
                                     "document", "read", 
@@ -247,30 +305,39 @@ class DocumentManager:
         new_name = data.get("new_name")
         filepath, extension = self._get_document(old_name)
         if filepath is None:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "rename", 
-                                "No encontré ese documento.")
+            return ActionResult(
+             success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="rename",
+                message="No encontré ese documento."
+            )
 
         new_path = os.path.join(self.path, f"{new_name}{extension}")
         try:
             os.rename(filepath, new_path)
             return ActionResult(
-                success=True,
-                status=ActionStatus.SUCCESS,
-                module="document",
-                command="rename",
-                message=f"'{old_name}' fue renombrado a '{new_name}'."
-            )
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="document",
+            command="rename",
+            message=f"'{old_name}' fue renombrado a '{new_name}'."
+        )
         except Exception as e:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "rename", 
-                                str(e))
+            return ActionResult(
+            success=False,
+            status=ActionStatus.ERROR,
+            module="document",
+            command="rename",
+            message=str(e)
+        )
+
+
 
     # ==================================================
     # Copiar documento
     # ==================================================
+
     def copy(self, data):
         old_name = data.get("old_name")
         new_name = data.get("new_name")
@@ -297,7 +364,6 @@ class DocumentManager:
                                 "document", "copy", 
                                 str(e))
 
-
     # ==================================================
     # Mover documento
     # ==================================================
@@ -305,6 +371,8 @@ class DocumentManager:
         name = data.get("topic")
         new_path = data.get("new_path")
         filepath, extension = self._get_document(name)
+
+        
         if filepath is None:
             return ActionResult(False, 
                                 ActionStatus.ERROR, 

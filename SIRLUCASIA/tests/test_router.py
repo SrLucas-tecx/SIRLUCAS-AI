@@ -1,4 +1,5 @@
 from app.core.router import Router
+from app.core.action_result import ActionResult
 
 
 class FakeModule:
@@ -51,22 +52,15 @@ class FakeDocument:
 
 
 def test_register_module():
-
     router = Router()
-
     module = FakeModule()
-
     router.register("test", module)
-
     assert "test" in router.modules
 
 
 def test_route_execute():
-
     router = Router()
-
     module = FakeModule()
-
     router.register("test", module)
 
     result = router.route({
@@ -79,91 +73,53 @@ def test_route_execute():
 
 
 def test_unknown_module():
-
     router = Router()
-
-    result = router.route({
-        "module": "fake"
-    })
-
-    assert "No existe" in result
+    result = router.route({"module": "fake"})
+    assert isinstance(result, ActionResult)
+    assert "No existe" in result.message
 
 
 def test_invalid_data():
-
     router = Router()
-
-    assert router.route("hola") == "Datos inválidos: se esperaba un diccionario."
+    result = router.route("hola")
+    assert isinstance(result, ActionResult)
+    assert "inválidos" in result.message.lower()
 
 
 def test_memory_called():
-
     router = Router()
-
     module = FakeModule()
     memory = FakeMemory()
-
     router.register("test", module)
     router.register("memory", memory)
 
-    router.route({
-        "module": "test"
-    })
-
+    router.route({"module": "test"})
     assert memory.saved
 
 
 def test_open_program():
-
     router = Router()
-
     router.register("system", FakeSystem())
-
-    result = router.route({
-        "command": "open",
-        "topic": "notepad"
-    })
-
+    result = router.route({"command": "open", "topic": "notepad"})
     assert result == "PROGRAM OPEN"
 
 
 def test_close_program():
-
     router = Router()
-
     router.register("system", FakeSystem())
-
-    result = router.route({
-        "command": "close",
-        "topic": "notepad"
-    })
-
+    result = router.route({"command": "close", "topic": "notepad"})
     assert result == "PROGRAM CLOSED"
 
 
 def test_open_document():
-
     router = Router()
-
     router.register("document", FakeDocument())
-
-    result = router.route({
-        "command": "open",
-        "topic": "archivo.txt"
-    })
-
+    result = router.route({"command": "open", "topic": "archivo.txt"})
     assert result == "DOCUMENT OPEN"
 
 
 def test_close_document():
-
     router = Router()
-
     router.register("document", FakeDocument())
-
-    result = router.route({
-        "command": "close",
-        "topic": "archivo.txt"
-    })
-
+    result = router.route({"command": "close", "topic": "archivo.txt"})
     assert result == "DOCUMENT CLOSED"

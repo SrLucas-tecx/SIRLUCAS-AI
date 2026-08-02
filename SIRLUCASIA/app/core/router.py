@@ -1,3 +1,6 @@
+from app.core.action_result import ActionResult
+from app.core.action_status import ActionStatus
+
 class Router:
 
     def __init__(self):
@@ -10,7 +13,13 @@ class Router:
     def route(self, data):
 
         if not isinstance(data, dict):
-            return "Datos inválidos: se esperaba un diccionario."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="router",
+                command=None,
+                message="Datos inválidos: se esperaba un diccionario."
+            )
 
         command = data.get("command")
         topic = data.get("topic")
@@ -27,16 +36,27 @@ class Router:
             if response is not None:
                 return response
 
-        # ← CORREGIDO
         module = (data.get("module") or "").lower()
 
         if not module:
-            return "No se especificó el módulo."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="router",
+                command=command,
+                message="No se especificó el módulo."
+            )
 
         manager = self.modules.get(module)
 
         if manager is None:
-            return f"No existe el módulo '{module}'."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="router",
+                command=command,
+                message=f"No existe el módulo '{module}'."
+            )
 
         response = manager.execute(data)
 

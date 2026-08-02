@@ -30,9 +30,15 @@ class Parser:
         result = self.rule_engine.match(text)
         print(f"[Parser] Resultado del RuleEngine: {result}")
 
-        # Paso 3: Si no hay coincidencia, devolver el mensaje original
+        # Paso 3: Si no hay coincidencia, devolver un dict mínimo
         if result is None:
-            return {"raw_message": message, "normalized": text, "rule": None}
+            return {
+                "module": "unknown",
+                "command": None,
+                "topic": None,
+                "raw_message": message,
+                "normalized": text
+            }
 
         # =====================================
         # CONTEXTO INTELIGENTE
@@ -61,9 +67,5 @@ class Parser:
 
         print(f"[Parser] Regla ejecutada: {result.get('rule', 'Ninguna')}")
 
-        # Paso 4: Devolver resultado enriquecido
-        return {
-            "raw_message": message,
-            "normalized": text,
-            "result": result,
-        }
+        # Paso 4: Devolver directamente el dict de acción
+        return result

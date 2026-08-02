@@ -1,8 +1,7 @@
 from app.core.memory_manager import MemoryManager
-
+from app.core.action_result import ActionResult
 
 def test_remember():
-
     memory = MemoryManager()
 
     response = memory.execute({
@@ -11,12 +10,13 @@ def test_remember():
         "value": "Juan"
     })
 
-    assert "Recordaré" in response
+    # Ahora response es ActionResult
+    assert isinstance(response, ActionResult)
+    assert "Recordaré" in response.message
     assert memory.memory["nombre"] == "Juan"
 
 
 def test_recall():
-
     memory = MemoryManager()
 
     memory.execute({
@@ -30,11 +30,13 @@ def test_recall():
         "key": "nombre"
     })
 
-    assert response == "Juan"
+    assert isinstance(response, ActionResult)
+    assert response.success is True
+    assert response.message == "Juan"
+    assert response.data["value"] == "Juan"
 
 
 def test_forget():
-
     memory = MemoryManager()
 
     memory.execute({
@@ -48,12 +50,12 @@ def test_forget():
         "key": "nombre"
     })
 
-    assert "olvidado" in response.lower()
+    assert isinstance(response, ActionResult)
+    assert "olvidado" in response.message.lower()
     assert "nombre" not in memory.memory
 
 
 def test_list_memories():
-
     memory = MemoryManager()
 
     memory.execute({
@@ -68,7 +70,9 @@ def test_list_memories():
         "value": "20"
     })
 
-    memories = memory.list_memories()
+    response = memory.list_memories()
 
-    assert memories["nombre"] == "Juan"
-    assert memories["edad"] == "20"
+    assert isinstance(response, ActionResult)
+    assert response.success is True
+    assert response.data["nombre"] == "Juan"
+    assert response.data["edad"] == "20"
