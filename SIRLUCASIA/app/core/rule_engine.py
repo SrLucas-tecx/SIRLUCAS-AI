@@ -4,7 +4,6 @@ import re
 class RuleEngine:
 
     def __init__(self, rules):
-
         self.rules = sorted(
             rules,
             key=lambda r: r.get("priority", 999)
@@ -18,56 +17,47 @@ class RuleEngine:
 
                 match = re.match(regex, text)
 
-                if match is None:
+                if not match:
                     continue
 
                 result = {
-
                     "rule": rule["name"],
                     "module": rule["module"],
                     "command": rule["command"]
-
                 }
 
-                # ======================================
-                # key / value (Memoria)
-                # ======================================
+                # ===============================
+                # Copiar todos los campos fijos
+                # ===============================
+                for key, value in rule.items():
 
-                if "key" in rule:
-
-                    result["key"] = rule["key"]
-
-                    if match.lastindex:
-
-                        result["value"] = match.group(1).strip()
-
-                # ======================================
-                # Capturar automáticamente
-                # topic_group
-                # format_group
-                # content_group
-                # old_name_group
-                # new_name_group
-                # etc.
-                # ======================================
-
-                for field, group in rule.items():
-
-                    if not field.endswith("_group"):
+                    if key in [
+                        "name",
+                        "regex",
+                        "module",
+                        "command",
+                        "priority"
+                    ]:
                         continue
 
-                    name = field.replace("_group", "")
+                    if not key.endswith("_group"):
+                        result[key] = value
 
-                    # Si existe el grupo, lo captura
-                    if match.lastindex and group <= match.lastindex:
+                # ===============================
+                # Capturar grupos
+                # ===============================
+                for key, value in rule.items():
 
-                        result[name] = match.group(group).strip()
+                    if not key.endswith("_group"):
+                        continue
 
-                    # Si NO existen grupos y el grupo es 0,
-                    # toma toda la coincidencia
-                    elif group == 0:
+                    field = key.replace("_group", "")
 
-                        result[name] = match.group(0).strip()
+                    if match.lastindex and value <= match.lastindex:
+                        result[field] = match.group(value).strip()
+
+                    elif value == 0:
+                        result[field] = match.group(0).strip()
 
                 print(f"[RuleEngine] -> {result}")
 

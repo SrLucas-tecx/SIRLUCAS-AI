@@ -4,6 +4,10 @@
 # optimización y ejecución de tareas
 # ==================================================
 
+from app.core.action_result import ActionResult
+from app.core.action_status import ActionStatus
+
+
 class TaskPipeline:
 
     def __init__(
@@ -27,9 +31,17 @@ class TaskPipeline:
         self.executor = executor
 
     def execute(self, message):
-        # Validar que realmente venga un diccionario
+
         if not isinstance(message, dict):
-            return []
+            return [
+                ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="assistant",
+                    command=None,
+                    message="Entrada inválida."
+                )
+            ]
 
         # Resolver entidad
         message = self.entity.resolve(message)
@@ -43,13 +55,28 @@ class TaskPipeline:
         # Resolver intención
         message = self.intent.resolve(message)
 
+        # ==============================
+        # Si no entendió la intención
+        # ==============================
+        if message.get("intent") == "UNKNOWN":
+
+            return [
+                ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="assistant",
+                    command=None,
+                    message="No entendí lo que quisiste decir."
+                )
+            ]
+
         # Actualizar contexto
         self.context.update(message)
 
         # Planificar acciones
         actions = self.planner.plan(message)
 
-        # Optimizar acciones con contexto
+        # Optimizar acciones
         actions = self.optimizer.optimize(actions, self.context)
 
         # Ejecutar acciones

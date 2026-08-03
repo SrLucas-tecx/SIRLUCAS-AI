@@ -55,10 +55,19 @@ class IntentResolver:
             elif command == "recall":
                 intent = "READ_MEMORY"
 
+            elif command == "forget":
+                intent = "FORGET_MEMORY"
+
         elif module == "conversation":
 
             intent = "CHAT"
 
-        data["intent"] = intent
+        # Si no encontró ninguna intención,
+        # marcar como desconocida.
+        if intent is None:
+            data["module"] = "unknown"
+            data["intent"] = "UNKNOWN"
+        else:
+            data["intent"] = intent
 
         return data

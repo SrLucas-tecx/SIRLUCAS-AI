@@ -35,16 +35,20 @@ class Action:
 
     # =====================================
     def to_dict(self):
-        return {
+
+        data = {
             "id": self.id,
             "module": self.module,
             "command": self.command,
-            "topic": self.topic,        # ← NUEVO
+            "topic": self.topic,
             "entity": self.entity,
-            "parameters": self.parameters,
             "priority": self.priority,
-            "status": self.status
+            "status": self.status,
         }
+
+        data.update(self.parameters)
+
+        return data
 
     # =====================================
     def __repr__(self):

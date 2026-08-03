@@ -12,27 +12,43 @@ class Logger:
         self.logs_path.mkdir(exist_ok=True)
         self.formatter = LoggerFormatter()
 
-    # ==========================
+    # ==========================================
     # Archivo del día
-    # ==========================
+    # ==========================================
     def current_log(self):
         filename = datetime.now().strftime("%Y-%m-%d.log")
         return self.logs_path / filename
 
-    # ==========================
+    # ==========================================
     # Escritura
-    # ==========================
+    # ==========================================
     def _write(self, level, module, command, message):
-        line = self.formatter.format(level, module, command, message)
+
+        # Si llega un Enum (LoggerLevel o ActionStatus)
+        if hasattr(level, "value"):
+            level = level.value
+
+        line = self.formatter.format(
+            level,
+            module,
+            command,
+            message
+        )
+
         try:
-            with open(self.current_log(), "a", encoding="utf-8") as file:
+            with open(
+                self.current_log(),
+                "a",
+                encoding="utf-8"
+            ) as file:
                 file.write(line + "\n")
+
         except Exception as e:
             print(f"[Logger] Error al escribir log: {e}")
 
-    # ==========================
+    # ==========================================
     # Métodos públicos
-    # ==========================
+    # ==========================================
     def debug(self, module, command, message):
         self._write(LoggerLevel.DEBUG, module, command, message)
 
@@ -48,16 +64,25 @@ class Logger:
     def critical(self, module, command, message):
         self._write(LoggerLevel.CRITICAL, module, command, message)
 
+    # ==========================================
+    # Registrar ActionResult
+    # ==========================================
     def log(self, result):
+
+        level = getattr(result, "status", LoggerLevel.INFO)
+
+        if hasattr(level, "value"):
+            level = level.value
+
         self._write(
-            result.status.value,
+            level,
             result.module,
             result.command,
             result.message
         )
 
 
-# ==========================
+# ==========================================
 # Instancia global
-# ==========================
+# ==========================================
 logger = Logger()

@@ -6,15 +6,16 @@ from app.core.rule_engine import RuleEngine
 class Parser:
 
     def __init__(self):
-        # Inicializar normalizador
+
         self.normalizer = Normalizer()
 
-        # Cargar reglas desde JSON
-        self.rules = JSONManager.load("app/modules/parser_rules.json")
+        self.rules = JSONManager.load(
+            "app/modules/parser_rules.json"
+        )
+
         if self.rules is None:
             self.rules = []
 
-        # Inicializar RuleEngine con las reglas cargadas
         self.rule_engine = RuleEngine(self.rules)
 
         print("=" * 50)
@@ -22,28 +23,35 @@ class Parser:
         print("=" * 50)
 
     def parse(self, message, context=None):
-        # Paso 1: Normalizar el mensaje
+
         text = self.normalizer.normalize(message)
+
         print(f"[Parser] Texto normalizado: {text}")
 
-        # Paso 2: Buscar coincidencia en las reglas
         result = self.rule_engine.match(text)
+
         print(f"[Parser] Resultado del RuleEngine: {result}")
 
-        # Paso 3: Si no hay coincidencia, devolver un dict mínimo
+        # ===============================
+        # MENSAJE DESCONOCIDO
+        # ===============================
         if result is None:
+
             return {
-                "module": "unknown",
-                "command": None,
-                "topic": None,
+                "rule": "unknown",
+                "module": "conversation",
+                "command": "unknown",
+                "topic": text,
                 "raw_message": message,
                 "normalized": text
             }
 
-        # =====================================
-        # CONTEXTO INTELIGENTE
-        # =====================================
+        # ===============================
+        # CONTEXTO
+        # ===============================
+
         if context is not None:
+
             if (
                 result["module"] == "document"
                 and "topic" not in result
@@ -65,7 +73,8 @@ class Parser:
             ):
                 result["topic"] = context.search()
 
-        print(f"[Parser] Regla ejecutada: {result.get('rule', 'Ninguna')}")
+        print(
+            f"[Parser] Regla ejecutada: {result.get('rule')}"
+        )
 
-        # Paso 4: Devolver directamente el dict de acción
         return result

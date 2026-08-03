@@ -6,16 +6,16 @@ class TaskExecutor:
     def execute(self, actions):
         results = []
         for action in actions:
-            result = self.router.route(action.to_dict())
+            print("\n=== ACTION ===")
+            print(action.to_dict())
 
-            print(action.to_dict()) 
+            result = self.router.route(action.to_dict())
 
             # Publicar evento para todos los listeners
             try:
                 self.event_bus.publish("action.executed", result)
             except Exception as e:
                 print(f"[TaskExecutor] Error al publicar evento: {e}")
-
 
             results.append(result)
 

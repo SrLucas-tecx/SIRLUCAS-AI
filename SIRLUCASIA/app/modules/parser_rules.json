@@ -9,7 +9,8 @@
       "^puedes llamarme (.+)$"
     ],
     "command": "remember",
-    "key": "nombre"
+    "key": "nombre",
+    "value_group": 1
   },
   {
     "name": "recordar_nombre",
@@ -39,7 +40,8 @@
         "^tengo (\\d+)$"
     ],
     "command": "remember",
-    "key": "edad"
+    "key": "edad",
+      "value_group": 1
   },
     {
     "name": "recordar_edad",
@@ -61,7 +63,8 @@
       "^vivo en (.+)$"
     ],
     "command": "remember",
-    "key": "ciudad"
+    "key": "ciudad",
+      "value_group": 1
   },
   {
     "name": "recordar_ciudad",
@@ -85,7 +88,8 @@
       "^trabajo como (.+)$"
     ],
     "command": "remember",
-    "key": "profesion"
+    "key": "profesion",
+      "value_group": 1
   },
   {
     "name": "recordar_profesion",
@@ -123,29 +127,7 @@
     "command": "search",
     "topic_group": 1
   },
-  {
-  "name": "buscar_conocimiento",
-  "module": "knowledge",
-  "priority": 5,
-  "regex": [
-    "^que es (.+)$",
-    "^qué es (.+)$",
-    "^quien es (.+)$",
-    "^quién es (.+)$",
-    "^definicion de (.+)$",
-    "^definición de (.+)$",
-    "^explicame (.+)$",
-    "^explícame (.+)$",
-    "^hablame de (.+)$",
-    "^háblame de (.+)$",
-    "^informacion sobre (.+)$",
-    "^información sobre (.+)$",
-    "^cuentame de (.+)$",
-    "^cuéntame de (.+)$"
-  ],
-  "command": "search",
-  "topic_group": 1
-},
+  
   {
     "name": "abrir_app",
     "module": "system",
@@ -330,7 +312,6 @@
     "name":"historial",
     "module":"conversation",
     "priority":20,
-
     "regex":[
         "^historial$",
         "^mostrar historial$",
@@ -338,14 +319,12 @@
         "^qué hice$",
         "^que hice$"
     ],
-
     "command":"history"
 },
 {
     "name": "cerrar_referencia",
     "module": "system",
     "priority": 2,
-
     "regex":[
         "^cierralo$",
         "^ciérralo$",
@@ -354,45 +333,22 @@
         "^terminalo$",
         "^termínalo$"
     ],
-
     "command":"close",
     "topic":"lo"
 },
 {
-    "name": "crear_documento_simple",
-    "module": "document",
-    "command": "create",
-    "priority": 10,
-
-    "regex": [
-        "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-        "^crear un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-        "^genera un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-        "^nuevo ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$"
-    ],
-
-    "topic_group": 1
-},
-{
-    "name": "crear_documento_formato",
-
-    "module": "document",
-
-    "command": "create",
-
-    "priority": 15,
-
-    "regex":[
-
-        "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-        "^crear un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-        "^genera un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-        "^nuevo ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$"
-        ],
-
-    "format_group":1,
-
-    "topic_group":2
+  "name": "crear_documento",
+  "module": "document",
+  "command": "create",
+  "priority": 15,
+  "regex": [
+    "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
+    "^crear un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
+    "^genera un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
+    "^nuevo ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$"
+  ],
+  "format_group": 1,
+  "topic_group": 2
 },
 {
   "name": "crear_documento_con_contenido",
@@ -422,4 +378,3 @@
 }
 
 ]
-

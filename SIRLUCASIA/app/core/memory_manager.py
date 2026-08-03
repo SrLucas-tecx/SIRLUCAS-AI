@@ -36,6 +36,7 @@ class MemoryManager:
     # Guardar información
     # ==================================================
     def remember(self, data):
+        print("\n=== MEMORY RECIBE ===")
         key = data.get("key")
         value = data.get("value")
 
