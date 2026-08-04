@@ -10,6 +10,19 @@
     ],
     "command": "remember",
     "key": "nombre",
+    "value_group": 1,
+    "category": "personal"
+  },
+  {
+    "name": "actualizar_nombre",
+    "module": "memory",
+    "priority": 2,
+    "regex": [
+      "^mi nombre ahora es (.+)$",
+      "^ahora me llamo (.+)$"
+    ],
+    "command": "update",
+    "key": "nombre",
     "value_group": 1
   },
   {
@@ -36,25 +49,81 @@
     "module": "memory",
     "priority": 1,
     "regex": [
-        "^tengo (\\d+) anos$",
-        "^tengo (\\d+)$"
+      "^tengo (\\d+) anos$",
+      "^tengo (\\d+)$"
     ],
     "command": "remember",
     "key": "edad",
-      "value_group": 1
+    "value_group": 1,
+    "category": "personal"
   },
-    {
+  {
     "name": "recordar_edad",
     "module": "memory",
     "priority": 2,
     "regex": [
-        "^que edad tengo$",
-        "^cuantos anos tengo$",
-        "^mi edad$"
+      "^que edad tengo$",
+      "^cuantos anos tengo$",
+      "^mi edad$"
     ],
     "command": "recall",
     "key": "edad"
-},
+  },
+  {
+    "name": "buscar_memoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^que sabes de mi$",
+      "^qué sabes de mí$",
+      "^muéstrame todo lo que recuerdas$"
+    ],
+    "command": "search"
+  },
+  {
+    "name": "contar_memorias",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^cuantas memorias tengo$",
+      "^cuántas memorias tengo$",
+      "^cuantos datos guardados$"
+    ],
+    "command": "count"
+  },
+  {
+    "name": "categorias_memoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^muéstrame mis datos personales$",
+      "^muéstrame mis gustos$",
+      "^muéstrame mis estudios$"
+    ],
+    "command": "categories"
+  },
+  {
+    "name": "exportar_memoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^exporta mi memoria$",
+      "^guarda mi memoria$"
+    ],
+    "command": "export",
+    "format": "json"
+  },
+  {
+    "name": "importar_memoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^importa mi memoria$",
+      "^carga mi memoria$"
+    ],
+    "command": "import_memories",
+    "file_group": 1
+  },
   {
     "name": "guardar_ciudad",
     "module": "memory",
@@ -64,7 +133,7 @@
     ],
     "command": "remember",
     "key": "ciudad",
-      "value_group": 1
+    "value_group": 1
   },
   {
     "name": "recordar_ciudad",
@@ -89,7 +158,7 @@
     ],
     "command": "remember",
     "key": "profesion",
-      "value_group": 1
+    "value_group": 1
   },
   {
     "name": "recordar_profesion",
@@ -127,23 +196,21 @@
     "command": "search",
     "topic_group": 1
   },
-  
   {
     "name": "abrir_app",
     "module": "system",
     "priority": 10,
     "regex": [
-        "^abre (.+)$",
-        "^abrir (.+)$",
-        "^ejecuta (.+)$",
-        "^inicia (.+)$",
-        "^abre la aplicacion (.+)$",
-        "^abre el programa (.+)$"
+      "^abre (.+)$",
+      "^abrir (.+)$",
+      "^ejecuta (.+)$",
+      "^inicia (.+)$",
+      "^abre la aplicacion (.+)$",
+      "^abre el programa (.+)$"
     ],
     "command": "open",
     "topic_group": 1
-},
-  
+  },
   {
     "name": "cerrar_app",
     "module": "system",
@@ -191,7 +258,7 @@
   },
   {
     "name": "clima",
-    "module": "weather",
+    "module": "web",
     "priority": 20,
     "regex": [
       "^como esta el clima$",
@@ -202,179 +269,172 @@
     "topic_group": 1
   },
   {
-    "name":"escribir_documento",
-    "module":"document",
-    "command":"write",
-    "priority":15,
-
-    "regex":[
-        "^escribe en ([a-zA-Z0-9_-]+) (.+)$",
-        "^agrega al documento ([a-zA-Z0-9_-]+) (.+)$"
+    "name": "escribir_documento",
+    "module": "document",
+    "command": "write",
+    "priority": 15,
+    "regex": [
+      "^escribe en ([a-zA-Z0-9_-]+) (.+)$",
+      "^agrega al documento ([a-zA-Z0-9_-]+) (.+)$"
     ],
-
-    "topic_group":1,
-    "content_group":2
-},
-{
-    "name":"leer_documento",
-    "module":"document",
-    "command":"read",
-    "priority":15,
-
-    "regex":[
-        "^lee (.+)$",
-        "^abre documento (.+)$"
+    "topic_group": 1,
+    "content_group": 2
+  },
+  {
+    "name": "leer_documento",
+    "module": "document",
+    "command": "read",
+    "priority": 15,
+    "regex": [
+      "^lee (.+)$",
+      "^abre documento (.+)$"
     ],
-
-    "topic_group":1
-},
-{
-    "name":"eliminar_documento",
-    "module":"document",
-    "command":"delete",
-    "priority":15,
-
-    "regex":[
-        "^elimina (.+)$",
-        "^borra (.+)$",
-        "^elimina documento (.+)$",
-        "^borrar documento (.+)$"
+    "topic_group": 1
+  },
+  {
+    "name": "eliminar_documento",
+    "module": "document",
+    "command": "delete",
+    "priority": 15,
+    "regex": [
+      "^elimina (.+)$",
+      "^borra (.+)$",
+      "^elimina documento (.+)$",
+      "^borrar documento (.+)$"
     ],
-
-    "topic_group":1
-},
-{
-  "name": "renombrar_documento",
-  "module": "document",
-  "priority": 15,
-  "regex": [
-    "^renombra (.+) a (.+)$",
-    "^cambia el nombre de (.+) a (.+)$"
-  ],
-  "command": "rename",
-  "old_name_group": 1,
-  "new_name_group": 2
-},
-{
+    "topic_group": 1
+  },
+  {
+    "name": "renombrar_documento",
+    "module": "document",
+    "priority": 15,
+    "regex": [
+      "^renombra (.+) a (.+)$",
+      "^cambia el nombre de (.+) a (.+)$"
+    ],
+    "command": "rename",
+    "old_name_group": 1,
+    "new_name_group": 2
+  },
+  {
     "name": "copiar_documento",
     "module": "document",
     "priority": 15,
     "regex": [
-        "^copia (.+) a (.+)$",
-        "^duplica (.+) a (.+)$"
+      "^copia (.+) a (.+)$",
+      "^duplica (.+) a (.+)$"
     ],
     "command": "copy",
     "old_name_group": 1,
     "new_name_group": 2
-},
-{
+  },
+  {
     "name": "listar_documentos",
     "module": "document",
     "priority": 20,
     "regex": [
-        "^lista documentos$",
-        "^listar documentos$",
-        "^muestrame mis documentos$",
-        "^que documentos tengo$"
+      "^lista documentos$",
+      "^listar documentos$",
+      "^muestrame mis documentos$",
+      "^que documentos tengo$"
     ],
     "command": "list"
-},
-{
+  },
+  {
     "name": "informacion_documento",
     "module": "document",
     "priority": 20,
     "regex": [
-        "^informacion de (.+)$",
-        "^info de (.+)$",
-        "^datos de (.+)$"
+      "^informacion de (.+)$",
+      "^info de (.+)$",
+      "^datos de (.+)$"
     ],
     "command": "info",
     "topic_group": 1
-},
-{
+  },
+  {
     "name": "conversacion",
     "module": "conversation",
     "priority": 100,
     "regex": [
-        "^hola$",
-        "^buenos dias$",
-        "^buenas tardes$",
-        "^buenas noches$",
-        "^gracias$",
-        "^adios$",
-        "^quien eres$",
-        "^como estas$"
+      "^hola$",
+      "^buenos dias$",
+      "^buenas tardes$",
+      "^buenas noches$",
+      "^gracias$",
+      "^adios$",
+      "^quien eres$",
+      "^como estas$"
     ],
     "command": "talk",
     "topic_group": 0
-},
-{
-    "name":"historial",
-    "module":"conversation",
-    "priority":20,
-    "regex":[
-        "^historial$",
-        "^mostrar historial$",
-        "^ultimos comandos$",
-        "^qué hice$",
-        "^que hice$"
+  },
+  {
+    "name": "historial",
+    "module": "conversation",
+    "priority": 20,
+    "regex": [
+      "^historial$",
+      "^mostrar historial$",
+      "^ultimos comandos$",
+      "^qué hice$",
+      "^que hice$"
     ],
-    "command":"history"
-},
-{
+    "command": "history"
+  },
+  {
     "name": "cerrar_referencia",
     "module": "system",
     "priority": 2,
-    "regex":[
-        "^cierralo$",
-        "^ciérralo$",
-        "^cierrala$",
-        "^ciérrala$",
-        "^terminalo$",
-        "^termínalo$"
+    "regex": [
+      "^cierralo$",
+      "^ciérralo$",
+      "^cierrala$",
+      "^ciérrala$",
+      "^terminalo$",
+      "^termínalo$"
     ],
-    "command":"close",
-    "topic":"lo"
-},
-{
-  "name": "crear_documento",
-  "module": "document",
-  "command": "create",
-  "priority": 15,
-  "regex": [
-    "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-    "^crear un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-    "^genera un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-    "^nuevo ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$"
-  ],
-  "format_group": 1,
-  "topic_group": 2
-},
-{
-  "name": "crear_documento_con_contenido",
-  "module": "document",
-  "priority": 15,
-  "regex": [
-    "^crea un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
-    "^crear un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$"
-  ],
-  "command": "create",
-  "format_group": 1,
-  "topic_group": 2,
-  "content_group": 3
-},
-{
-  "name": "listar_documentos_por_formato",
-  "module": "document",
-  "priority": 20,
-  "regex": [
-    "^lista documentos de tipo ([a-zA-Z]+)$",
-    "^listar documentos de tipo ([a-zA-Z]+)$",
-    "^muestrame mis documentos de tipo ([a-zA-Z]+)$",
-    "^que documentos de tipo ([a-zA-Z]+) tengo$"
-  ],
-  "command": "list_by_format",
-  "format_group": 1
-}
-
+    "command": "close",
+    "topic": "lo"
+  },
+  {
+    "name": "crear_documento",
+    "module": "document",
+    "command": "create",
+    "priority": 15,
+    "regex": [
+      "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
+      "^genera un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
+      "^nuevo ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "format_group": 1,
+    "topic_group": 2
+  },
+  {
+    "name": "crear_documento_con_contenido",
+    "module": "document",
+    "priority": 15,
+    "regex": [
+      "^crea un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
+      "^crear un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$"
+    ],
+    "command": "create",
+    "format_group": 1,
+    "topic_group": 2,
+    "content_group": 3
+  },
+  {
+    "name": "listar_documentos_por_formato",
+    "module": "document",
+    "priority": 20,
+    "regex": [
+      "^lista documentos de tipo ([a-zA-Z]+)$",
+      "^listar documentos de tipo ([a-zA-Z]+)$",
+      "^muestrame mis documentos de tipo ([a-zA-Z]+)$",
+      "^que documentos de tipo ([a-zA-Z]+) tengo$"
+    ],
+    "command": "list_by_format",
+    "format_group": 1
+  }
 ]
