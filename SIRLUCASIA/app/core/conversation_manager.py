@@ -1,454 +1,237 @@
-from collections import deque
-from datetime import datetime
+"""
+ConversationManager
+=====================
+Orquestador puro de conversación de SIRLUCAS AI.
 
-# ==================================================
-# ContextStack
-# Estructura de pilas (stacks) de corto plazo.
-#
-# Almacena el historial reciente de distintos tipos de
-# contexto manejados por SIRLUCAS AI:
-#
-#   - programas
-#   - documentos
-#   - busquedas
-#   - entidades
-#   - archivos
-#   - carpetas
-#   - urls
-#   - personas
-#   - tareas
-#
-# Cada pila conserva únicamente los últimos N elementos
-# (por defecto 10). Al superar el límite, el elemento más
-# antiguo se descarta automáticamente gracias a
-# collections.deque(maxlen=...).
-#
-# Cada elemento se guarda como:
-#   {"value": <valor>, "timestamp": <ISO 8601>}
-#
-# Esto permite reconstruir "cuándo" se tocó por última vez
-# cada tipo de contexto, algo que ContextManager utiliza
-# para resolver referencias (pronombres) como "ábrelo".
-# ==================================================
+Responsabilidad ÚNICA de esta clase: coordinar el flujo de un turno de
+conversación llamando a los especialistas correspondientes. NO contiene
+lógica de memoria, conocimiento, contexto ni persistencia — toda esa
+lógica vive en `MemoryManager`, `KnowledgeManager`, `ContextManager` y
+`TaskExecutor` respectivamente. Este módulo solo decide *cuándo* y *en
+qué orden* se llama a cada uno.
 
-DEFAULT_MAX_SIZE = 10
+API pública (compatibilidad preservada)
+------------------------------------------
+    - execute(data)  -> dispatcher genérico (comportamiento original).
+    - process(data)  -> punto de entrada principal de un turno de
+                         conversación completo (contexto -> memoria ->
+                         conocimiento/tarea -> persistencia).
+    - talk(data)      -> se conserva por compatibilidad hacia atrás con
+                         quien ya la use; ahora delega en KnowledgeManager
+                         en vez de tener su propia base de datos.
 
-# Nombre interno de cada pila -> nombre público (para to_dict/estadísticas)
-_STACK_NAMES = (
-    "programs",
-    "documents",
-    "searches",
-    "entities",
-    "files",
-    "folders",
-    "urls",
-    "persons",
-    "tasks",
-)
+Nota de integración / contratos asumidos
+------------------------------------------
+No tengo visibilidad del código real de `KnowledgeManager`,
+`ContextManager` ni `TaskExecutor`, así que asumí una convención de
+nombres razonable y consistente con `MemoryManager` (que sí revisamos).
+Cada llamada a un sub-manager pasa primero por un helper privado
+(`_consult_memory`, `_consult_knowledge`, `_get_context_snapshot`, etc.)
+que:
+    1. Intenta el método "esperado" según el contrato documentado abajo.
+    2. Si no existe, cae de forma segura (sin lanzar excepción) a
+       `execute({"command": ...})`, que es el dispatcher uniforme que ya
+       usa `MemoryManager` y que probablemente los demás managers también
+       implementan.
+    3. Si nada de eso existe, devuelve un valor neutro (None / {} / [])
+       en vez de romper el flujo.
 
+Esto permite que `ConversationManager` funcione hoy mismo sin conocer las
+firmas exactas, y que sea trivial de ajustar en cuanto se confirmen los
+nombres reales (ver TODOs puntuales en cada helper).
 
-class ContextStack:
-    """
-    Pilas de contexto de corto plazo del asistente.
+Contratos asumidos (a confirmar):
+    - MemoryManager.consult(query, context)      -> ActionResult  (CONFIRMADO, ya existe)
+    - MemoryManager.remember_turn(data)           -> ActionResult  (CONFIRMADO, ya existe)
+    - ContextManager.get_context() / .snapshot()  -> dict           (ASUMIDO)
+    - ContextManager.update(data) / .push(data)   -> None/ActionResult (ASUMIDO)
+    - KnowledgeManager.answer(query, context)     -> str/None       (ASUMIDO)
+    - TaskExecutor.run(data) / .execute(data)     -> ActionResult   (ASUMIDO)
+"""
 
-    No guarda memoria permanente: vive únicamente durante la
-    conversación actual y se reinicia junto con el ContextManager.
-    """
+from __future__ import annotations
 
-    def __init__(self, max_size: int = DEFAULT_MAX_SIZE):
-        self.max_size = max_size
-        self._init_stacks()
+from typing import Any
 
-    # ==========================================
-    # Inicialización / reinicio de las pilas
-    # ==========================================
-    def _init_stacks(self):
-        self._programs  = deque(maxlen=self.max_size)
-        self._documents = deque(maxlen=self.max_size)
-        self._searches  = deque(maxlen=self.max_size)
-        self._entities  = deque(maxlen=self.max_size)
-        self._files     = deque(maxlen=self.max_size)
-        self._folders   = deque(maxlen=self.max_size)
-        self._urls      = deque(maxlen=self.max_size)
-        self._persons   = deque(maxlen=self.max_size)
-        self._tasks     = deque(maxlen=self.max_size)
-
-    def clear(self):
-        """Vacía todas las pilas."""
-        self._init_stacks()
-
-    # ==========================================
-    # Operaciones genéricas internas
-    # ==========================================
-    def _push(self, stack: deque, value):
-        if value is None:
-            return None
-        # eliminar duplicados previos
-        stack = deque([item for item in stack if item["value"] != value], maxlen=self.max_size)
-        stack.append({"value": value, "timestamp": datetime.now().isoformat()})
-        setattr(self, stack_name, stack)
-        return value
+from app.core.memory_manager import MemoryManager
+from app.core.knowledge_manager import KnowledgeManager
+from app.core.context_manager import ContextManager
+from app.core.task_executor import TaskExecutor
 
 
-    def _pop(self, stack: deque):
-        if not stack:
-            return None
-        return stack.pop()["value"]
+class ConversationManager:
+    """Orquestador puro: coordina Memoria, Conocimiento, Contexto y Ejecución de tareas."""
 
-    def _peek(self, stack: deque):
-        if not stack:
-            return None
-        return stack[-1]["value"]
+    # ==================================================
+    # Inicialización
+    # ==================================================
+    def __init__(
+        self,
+        memory: MemoryManager | None = None,
+        knowledge: KnowledgeManager | None = None,
+        context: ContextManager | None = None,
+        task_executor: TaskExecutor | None = None,
+    ) -> None:
+        # Inyección de dependencias con defaults: permite tanto el uso
+        # normal (SIRLUCAS instancia todo) como pruebas unitarias con
+        # mocks, sin cambiar la firma pública del constructor.
+        self.memory = memory or MemoryManager()
+        self.knowledge = knowledge or KnowledgeManager()
+        self.context = context or ContextManager()
+        self.task_executor = task_executor or TaskExecutor()
 
-    def _values(self, stack: deque):
-        return [item["value"] for item in stack]
+        print("=" * 50)
+        print("[ConversationManager]")
+        print("Inicializado correctamente.")
+        print("=" * 50)
 
-    # ==========================================
-    # Propiedades de solo lectura (compatibilidad
-    # con el ContextManager original: .programs,
-    # .documents, .searches, etc.)
-    # ==========================================
-    @property
-    def programs(self):
-        return self._values(self._programs)
+    # ==================================================
+    # Dispatcher (comportamiento original preservado)
+    # ==================================================
+    def execute(self, data: dict) -> Any:
+        command = data.get("command")
+        method = getattr(self, command, None)
+        if method is None:
+            return f"No existe el comando '{command}'."
+        return method(data)
 
-    @property
-    def documents(self):
-        return self._values(self._documents)
-
-    @property
-    def searches(self):
-        return self._values(self._searches)
-
-    @property
-    def entities(self):
-        return self._values(self._entities)
-
-    @property
-    def files(self):
-        return self._values(self._files)
-
-    @property
-    def folders(self):
-        return self._values(self._folders)
-
-    @property
-    def urls(self):
-        return self._values(self._urls)
-
-    @property
-    def persons(self):
-        return self._values(self._persons)
-
-    @property
-    def tasks(self):
-        return self._values(self._tasks)
-
-    # ==========================================
-    # PUSH
-    # ==========================================
-    def push_program(self, value):
-        return self._push(self._programs, value)
-
-    def push_document(self, value):
-        return self._push(self._documents, value)
-
-    def push_search(self, value):
-        return self._push(self._searches, value)
-
-    def push_entity(self, value):
-        return self._push(self._entities, value)
-
-    def push_file(self, value):
-        return self._push(self._files, value)
-
-    def push_folder(self, value):
-        return self._push(self._folders, value)
-
-    def push_url(self, value):
-        return self._push(self._urls, value)
-
-    def push_person(self, value):
-        return self._push(self._persons, value)
-
-    def push_task(self, value):
-        return self._push(self._tasks, value)
-
-    # ==========================================
-    # POP
-    # ==========================================
-    def pop_program(self):
-        return self._pop(self._programs)
-
-    def pop_document(self):
-        return self._pop(self._documents)
-
-    def pop_search(self):
-        return self._pop(self._searches)
-
-    def pop_entity(self):
-        return self._pop(self._entities)
-
-    def pop_file(self):
-        return self._pop(self._files)
-
-    def pop_folder(self):
-        return self._pop(self._folders)
-
-    def pop_url(self):
-        return self._pop(self._urls)
-
-    def pop_person(self):
-        return self._pop(self._persons)
-
-    def pop_task(self):
-        return self._pop(self._tasks)
-
-    # ==========================================
-    # PEEK (ver el tope sin sacarlo)
-    # ==========================================
-    def peek_program(self):
-        return self._peek(self._programs)
-
-    def peek_document(self):
-        return self._peek(self._documents)
-
-    def peek_search(self):
-        return self._peek(self._searches)
-
-    def peek_entity(self):
-        return self._peek(self._entities)
-
-    def peek_file(self):
-        return self._peek(self._files)
-
-    def peek_folder(self):
-        return self._peek(self._folders)
-
-    def peek_url(self):
-        return self._peek(self._urls)
-
-    def peek_person(self):
-        return self._peek(self._persons)
-
-    def peek_task(self):
-        return self._peek(self._tasks)
-
-    # ==========================================
-    # Estadísticas
-    # ==========================================
-    def statistics(self):
-        return {
-            "programs": len(self._programs),
-            "documents": len(self._documents),
-            "searches": len(self._searches),
-            "entities": len(self._entities),
-            "files": len(self._files),
-            "folders": len(self._folders),
-            "urls": len(self._urls),
-            "persons": len(self._persons),
-            "tasks": len(self._tasks),
-            "max_size": self.max_size,
-        }
-
-    # ==========================================
-    # Serialización
-    # ==========================================
-    def to_dict(self):
-        internal = {
-            "programs": self._programs,
-            "documents": self._documents,
-            "searches": self._searches,
-            "entities": self._entities,
-            "files": self._files,
-            "folders": self._folders,
-            "urls": self._urls,
-            "persons": self._persons,
-            "tasks": self._tasks,
-        }
-        return {name: list(stack) for name, stack in internal.items()}
-
-    def from_dict(self, data: dict):
+    # ==================================================
+    # Punto de entrada principal de un turno de conversación
+    # ==================================================
+    def process(self, data: dict) -> Any:
         """
-        Reconstruye las pilas a partir de un diccionario generado
-        previamente por to_dict(). Los elementos deben tener la forma
-        {"value": ..., "timestamp": ...}.
+        Orquesta un turno de conversación completo. No decide *qué*
+        responder ni *cómo* recordar: solo define el orden de llamadas:
+
+            1. Lee el contexto actual (ContextManager).
+            2. Consulta memorias relevantes (MemoryManager.consult).
+            3. Pide una respuesta a Conocimiento/Ejecución de tareas.
+            4. Persiste el contexto y la memoria del turno.
         """
-        if not data:
-            return self
-
-        self._init_stacks()
-
-        mapping = {
-            "programs": self._programs,
-            "documents": self._documents,
-            "searches": self._searches,
-            "entities": self._entities,
-            "files": self._files,
-            "folders": self._folders,
-            "urls": self._urls,
-            "persons": self._persons,
-            "tasks": self._tasks,
-        }
-
-        for name, stack in mapping.items():
-            for item in data.get(name, []):
-                if isinstance(item, dict) and "value" in item:
-                    stack.append(item)
-                else:
-                    # Compatibilidad con listas simples de valores
-                    stack.append({
-                        "value": item,
-                        "timestamp": datetime.now().isoformat(),
-                    })
-
-        return self
-
-    def __repr__(self):
-        return (f"<ContextStack size={len(self)} max_size={self.max_size} "
-                f"program={self.peek_program()} document={self.peek_document()} "
-                f"entity={self.peek_entity()} task={self.peek_task()} "
-                f"last_access={self.get_last_timestamp('programs')}>")
-
-
-    def last(self):
-        stacks = [
-            self._programs,
-            self._documents,
-            self._searches,
-            self._entities,
-            self._files,
-            self._folders,
-            self._urls,
-            self._persons,
-            self._tasks,
-        ]
-
-        for stack in stacks:
-            if stack:
-                return stack[-1]
-
-        return None
-    def exists(self, stack_name, value):
-        stack = getattr(self, f"_{stack_name}", None)
-
-        if stack is None:
-            return False
-
-        return any(item["value"] == value for item in stack)
-    def count(self, stack_name):
-        stack = getattr(self, f"_{stack_name}", None)
-
-        if stack is None:
-            return 0
-
-        return len(stack)
-    def clear_stack(self, stack_name):
-        stack = getattr(self, f"_{stack_name}", None)
-
-        if stack is not None:
-            stack.clear()
-    def peek_all(self):
-        return {
-            "program": self.peek_program(),
-            "document": self.peek_document(),
-            "search": self.peek_search(),
-            "entity": self.peek_entity(),
-            "file": self.peek_file(),
-            "folder": self.peek_folder(),
-            "url": self.peek_url(),
-            "person": self.peek_person(),
-            "task": self.peek_task()
-        }
-    def __len__(self):
-        return sum(len(getattr(self, f"_{name}")) for name in _STACK_NAMES)
-
-    def is_empty(self):
-        return len(self) == 0
-
-    def get_stack(self, stack_name):
-        stack = getattr(self, f"_{stack_name}", None)
-
-        if stack is None:
-            return []
-
-        return self._values(stack)
-    
-    def __contains__(self, value):
-
-        for name in _STACK_NAMES:
-
-            stack = getattr(self, f"_{name}")
-
-            if any(item["value"] == value for item in stack):
-                return True
-
-        return False
-    
-    def __iter__(self):
-
-        for name in _STACK_NAMES:
-
-            stack = getattr(self, f"_{name}")
-
-            for item in stack:
-                yield item
-
-    def get_last_timestamp(self, stack_name):
-
-        stack = getattr(self, f"_{stack_name}", None)
-
-        if not stack:
+        message = data.get("message") or data.get("topic")
+        if not message:
             return None
 
-        return stack[-1]["timestamp"]
+        context_snapshot = self._get_context_snapshot()
+        memory_hits = self._consult_memory(message, context_snapshot)
 
-    def touch(self, stack_name, value):
+        response = self._resolve_response(message, context_snapshot, memory_hits, data)
 
-        stack = getattr(self, f"_{stack_name}", None)
+        self._persist_context(message, response)
+        self._persist_memory(message, response)
 
-        if stack is None:
+        return response
+
+    # ==================================================
+    # Compatibilidad hacia atrás
+    # ==================================================
+    def talk(self, data: dict) -> Any:
+        """
+        Se conserva por compatibilidad con integraciones existentes que
+        ya llaman a `talk()`. La lógica de "buscar una respuesta para un
+        tema" ya NO vive acá: se delega íntegramente a KnowledgeManager.
+        """
+        topic = data.get("topic")
+        if topic is None:
+            return None
+
+        response = self._consult_knowledge(topic, context=None)
+        return response if response is not None else "No tengo una respuesta para eso."
+
+    # ==================================================
+    # Helpers privados de orquestación (sin lógica propia,
+    # solo delegación defensiva a cada especialista)
+    # ==================================================
+    def _get_context_snapshot(self) -> dict:
+        """Delega en ContextManager. TODO: confirmar nombre real del método de lectura."""
+        for method_name in ("get_context", "snapshot", "get"):
+            method = getattr(self.context, method_name, None)
+            if callable(method):
+                try:
+                    return method() or {}
+                except TypeError:
+                    continue
+        return self._fallback_execute(self.context, "get_context", {}) or {}
+
+    def _persist_context(self, message: str, response: Any) -> None:
+        """Delega en ContextManager. TODO: confirmar nombre real del método de escritura."""
+        payload = {"message": message, "response": response}
+        for method_name in ("update", "push", "append"):
+            method = getattr(self.context, method_name, None)
+            if callable(method):
+                try:
+                    method(payload)
+                    return
+                except TypeError:
+                    continue
+        self._fallback_execute(self.context, "update", payload)
+
+    def _consult_memory(self, message: str, context: dict) -> Any:
+        """Delega en MemoryManager.consult(), contrato ya confirmado."""
+        consult = getattr(self.memory, "consult", None)
+        if callable(consult):
+            result = consult(message, context)
+            return getattr(result, "data", result)
+        return self._fallback_execute(self.memory, "consult", {"text": message, "context": context})
+
+    def _persist_memory(self, message: str, response: Any) -> None:
+        """Delega en MemoryManager.remember_turn(), contrato ya confirmado."""
+        remember_turn = getattr(self.memory, "remember_turn", None)
+        if callable(remember_turn):
+            remember_turn({"message": message, "response": response})
             return
+        self._fallback_execute(self.memory, "remember_turn", {"message": message, "response": response})
 
-        self._push(stack, value)
+    def _consult_knowledge(self, query: str, context: dict | None) -> Any:
+        """Delega en KnowledgeManager. TODO: confirmar nombre real (answer/find/lookup)."""
+        for method_name in ("answer", "find", "lookup", "query"):
+            method = getattr(self.knowledge, method_name, None)
+            if callable(method):
+                try:
+                    return method(query, context) if context is not None else method(query)
+                except TypeError:
+                    try:
+                        return method(query)
+                    except TypeError:
+                        continue
+        return self._fallback_execute(self.knowledge, "answer", {"query": query, "context": context})
 
-    def all_values(self):
-
-        return {
-
-            name: self._values(getattr(self, f"_{name}"))
-
-            for name in _STACK_NAMES
-
-        }
-    def _push(self, stack: deque, value):
-        """
-        Inserta un valor en la pila, eliminando duplicados previos.
-        Cada elemento se guarda con su timestamp.
-        """
-        if value is None:
-            return None
-
-        # Eliminar duplicados previos
-        for item in list(stack):
-            if item["value"] == value:
-                stack.remove(item)
-
-        stack.append({"value": value, "timestamp": datetime.now().isoformat()})
-        return value
-
-
-    def last(self):
-        """
-        Devuelve el último elemento global de todas las pilas.
-        Incluye el tipo de pila, el valor y el timestamp.
-        """
-        for name in _STACK_NAMES:
-            stack = getattr(self, f"_{name}")
-            if stack:
-                return {
-                    "type": name,
-                    "value": stack[-1]["value"],
-                    "timestamp": stack[-1]["timestamp"]
-                }
+    def _run_task(self, data: dict) -> Any:
+        """Delega en TaskExecutor. TODO: confirmar nombre real (run/execute/dispatch)."""
+        for method_name in ("run", "execute", "dispatch"):
+            method = getattr(self.task_executor, method_name, None)
+            if callable(method):
+                try:
+                    return method(data)
+                except TypeError:
+                    continue
         return None
+
+    def _resolve_response(self, message: str, context: dict, memory_hits: Any, raw_data: dict) -> Any:
+        """
+        Decide, de forma puramente orquestadora, a quién le corresponde
+        resolver el mensaje: si trae un `command`/`task` explícito se
+        delega en TaskExecutor; si no, se consulta a KnowledgeManager
+        (que a su vez puede apoyarse en `memory_hits` como contexto).
+        """
+        if raw_data.get("command") or raw_data.get("task"):
+            task_payload = {**raw_data, "context": context, "memory": memory_hits}
+            return self._run_task(task_payload)
+
+        return self._consult_knowledge(message, {"context": context, "memory": memory_hits})
+
+    def _fallback_execute(self, target: Any, command: str, data: dict) -> Any:
+        """
+        Último recurso: si el sub-manager no expone ninguno de los
+        métodos "esperados" por nombre, se intenta su dispatcher
+        uniforme `execute({"command": ...})` (el mismo contrato que ya
+        usa MemoryManager). Nunca lanza excepción hacia arriba.
+        """
+        execute = getattr(target, "execute", None)
+        if not callable(execute):
+            return None
+        try:
+            result = execute({"command": command, **data} if isinstance(data, dict) else {"command": command})
+            return getattr(result, "data", result)
+        except Exception:
+            return None

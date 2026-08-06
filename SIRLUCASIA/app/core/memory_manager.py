@@ -35,17 +35,58 @@ acceso) ya NO golpea el disco en cada lectura: solo marca la memoria como
 `export()` o `autosave()`. Esto elimina la mayor fuente de I/O redundante
 del diseño original, que escribía `memory.json` completo en cada consulta.
 
+Índices internos (categoría / etiquetas)
+------------------------------------------
+`find_by_category`, `find_by_tag`, `categories()`, `tags()` y
+`statistics()` ya no recorren linealmente todo `self.memory` en cada
+llamada. Se mantienen dos índices invertidos en memoria,
+`self._category_index` y `self._tag_index` (dict[str, set[str]]), que se
+actualizan de forma incremental en cada punto de mutación (remember,
+update, forget, rename, duplicate, merge, clear, clear_category, restore,
+import_memories, from_dict, set). El resultado observable es idéntico al
+de antes (mismas claves, mismo contenido); solo cambia la complejidad de
+lectura, de O(n) a O(1)/O(k) según el tamaño del resultado.
+
+Concurrencia
+-------------
+Se agregó un `threading.RLock` (`self._lock`) que protege las secciones
+de lectura-modificación-escritura de las operaciones estructurales y de
+`save()`. Esto no cambia ninguna firma ni ningún valor de retorno: solo
+hace que la clase sea segura de usar desde varios hilos (por ejemplo, si
+en el futuro el Router despacha comandos de memoria de forma concurrente).
+
 Escalabilidad
 --------------
 Toda la persistencia pasa por dos métodos privados, `_read_storage()` y
 `_write_storage()`, que hoy delegan en `JSONManager`. Migrar a SQLite,
 PostgreSQL o MongoDB en el futuro implica reemplazar únicamente esos dos
 métodos: la API pública (`remember`, `recall`, `search`, etc.) no cambia.
+
+TODO (mejoras que SÍ tocarían la arquitectura y por eso NO se implementan
+aquí, solo se dejan preparadas):
+    - Índice de aliases (`self._alias_index`): hoy `find_by_alias` y
+      `resolve_alias` siguen siendo O(n). Se podría indexar igual que
+      categoría/tags, pero como los aliases pueden repetirse o
+      colisionar entre memorias, requeriría definir una política de
+      resolución (primer match, error, lista) que hoy no está
+      especificada por el comportamiento original. Se deja documentado
+      para no alterar el comportamiento observable actual.
+    - `score_relevance` / `rank_memories` podrían apoyarse en embeddings
+      reales (ver `search_semantic`, que ya actúa como "seam" para eso)
+      en vez de la heurística de substring + importancia + uso. El
+      cálculo de score es la única pieza a reemplazar; la firma pública
+      no cambiaría.
+    - `_read_storage` / `_write_storage` migrando a SQLite/Postgres/Mongo
+      permitirían mover los índices de categoría/tags a consultas nativas
+      (WHERE category = ?), eliminando la necesidad de mantenerlos a mano
+      en Python. Mientras la persistencia sea un único JSON, mantener los
+      índices en memoria es la mejora correcta.
 """
 
 from __future__ import annotations
 
 import json
+import threading
 from datetime import datetime
 from typing import Any
 
@@ -83,6 +124,16 @@ class MemoryManager:
         self._dirty: bool = False
         self.autosave_enabled = autosave_enabled
         self._last_saved_at: str | None = None
+
+        # Lock de reentrancia: protege las operaciones estructurales y el
+        # volcado a disco frente a acceso concurrente desde varios hilos.
+        self._lock = threading.RLock()
+
+        # Índices invertidos categoría -> {claves} y etiqueta -> {claves},
+        # reconstruidos a partir de lo cargado desde disco.
+        self._category_index: dict[str, set[str]] = {}
+        self._tag_index: dict[str, set[str]] = {}
+        self._index_rebuild()
 
     # ==================================================
     # 3. DISPATCHER
@@ -129,12 +180,7 @@ class MemoryManager:
         category = self._normalize_category(data.get("category"))
         importance = self._clamp_importance(data.get("importance", DEFAULT_IMPORTANCE))
 
-        valid_key, key_error = self._validate_key(key)
-        if not valid_key:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "remember", "Clave o valor inválido.")
-
-        valid_value, value_error = self._validate_value(value)
-        if not valid_value:
+        if not self._validate_key_value(key, value):
             return ActionResult(False, ActionStatus.ERROR, "memory", "remember", "Clave o valor inválido.")
 
         record = self._create_record(
@@ -146,14 +192,18 @@ class MemoryManager:
             tags=data.get("tags"),
         )
 
-        if key in self.memory:
-            # Preserva id y fecha de creación originales si la clave ya existía.
-            record["id"] = self.memory[key].get("id", record["id"])
-            record["created_at"] = self.memory[key].get("created_at", record["created_at"])
+        with self._lock:
+            existing = self.memory.get(key)
+            if existing is not None:
+                # Preserva id y fecha de creación originales si la clave ya existía.
+                record["id"] = existing.get("id", record["id"])
+                record["created_at"] = existing.get("created_at", record["created_at"])
+                self._index_remove(key, existing)
 
-        self.memory[key] = record
-        self.mark_dirty()
-        self.save(force=True)
+            self.memory[key] = record
+            self._index_add(key, record)
+            self.mark_dirty()
+            self.save(force=True)
 
         return ActionResult(True, ActionStatus.SUCCESS, "memory", "remember", f"Recordaré que tu {key} es {value}.", record)
 
@@ -162,29 +212,32 @@ class MemoryManager:
         key = self._normalize(data.get("key"))
         value = data.get("value")
 
-        valid_key, key_error = self._validate_key(key)
-        if not valid_key:
+        if not self._validate_key_value(key, value):
             return ActionResult(False, ActionStatus.ERROR, "memory", "update", "Clave o valor inválido.")
 
-        valid_value, value_error = self._validate_value(value)
-        if not valid_value:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "update", "Clave o valor inválido.")
+        with self._lock:
+            if key not in self.memory:
+                return ActionResult(False, ActionStatus.WARNING, "memory", "update", f"No existe '{key}' en memoria.")
 
-        if key not in self.memory:
-            return ActionResult(False, ActionStatus.WARNING, "memory", "update", f"No existe '{key}' en memoria.")
+            record = self.memory[key]
+            # Se retira del índice con el estado "viejo" y se vuelve a
+            # indexar al final, así categoría/tags quedan siempre
+            # consistentes sin importar qué campo haya cambiado.
+            self._index_remove(key, record)
 
-        self.memory[key]["value"] = value
-        self.memory[key]["updated_at"] = self._now()
+            record["value"] = value
+            record["updated_at"] = self._now()
 
-        if data.get("category"):
-            self.memory[key]["category"] = self._normalize_category(data["category"])
-        if data.get("importance") is not None:
-            self.memory[key]["importance"] = self._clamp_importance(data["importance"])
+            if data.get("category"):
+                record["category"] = self._normalize_category(data["category"])
+            if data.get("importance") is not None:
+                record["importance"] = self._clamp_importance(data["importance"])
 
-        self.mark_dirty()
-        self.save(force=True)
+            self._index_add(key, record)
+            self.mark_dirty()
+            self.save(force=True)
 
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "update", f"He actualizado tu {key} a {value}.", self.memory[key])
+        return ActionResult(True, ActionStatus.SUCCESS, "memory", "update", f"He actualizado tu {key} a {value}.", record)
 
     def forget(self, data: dict) -> ActionResult:
         """Elimina una memoria por clave."""
@@ -194,12 +247,14 @@ class MemoryManager:
         if not valid_key:
             return ActionResult(False, ActionStatus.ERROR, "memory", "forget", "No especificaste la memoria a eliminar.")
 
-        if key not in self.memory:
-            return ActionResult(False, ActionStatus.WARNING, "memory", "forget", f"No existe '{key}' en memoria.")
+        with self._lock:
+            if key not in self.memory:
+                return ActionResult(False, ActionStatus.WARNING, "memory", "forget", f"No existe '{key}' en memoria.")
 
-        del self.memory[key]
-        self.mark_dirty()
-        self.save(force=True)
+            record = self.memory.pop(key)
+            self._index_remove(key, record)
+            self.mark_dirty()
+            self.save(force=True)
 
         return ActionResult(True, ActionStatus.SUCCESS, "memory", "forget", f"He olvidado '{key}'.")
 
@@ -224,30 +279,42 @@ class MemoryManager:
             importance=self._clamp_importance(importance),
             source="system",
         )
-        self.memory[key] = record
-        self.mark_dirty()
-        self.save(force=True)
+        with self._lock:
+            existing = self.memory.get(key)
+            if existing is not None:
+                self._index_remove(key, existing)
+            self.memory[key] = record
+            self._index_add(key, record)
+            self.mark_dirty()
+            self.save(force=True)
         return record
 
     def clear(self, data: dict | None = None) -> ActionResult:
         """Elimina TODAS las memorias."""
-        removed = len(self.memory)
-        self.memory.clear()
-        self.mark_dirty()
-        self.save(force=True)
+        with self._lock:
+            removed = len(self.memory)
+            self.memory.clear()
+            self._category_index.clear()
+            self._tag_index.clear()
+            self.mark_dirty()
+            self.save(force=True)
         return ActionResult(True, ActionStatus.SUCCESS, "memory", "clear", f"Se eliminaron {removed} memorias.", {"removed": removed})
 
     def clear_category(self, data: dict) -> ActionResult:
         """Elimina todas las memorias de una categoría."""
         category = self._normalize_category(data.get("category"))
-        keys = [k for k, v in self.memory.items() if v.get("category") == category]
 
-        for key in keys:
-            del self.memory[key]
+        with self._lock:
+            keys = list(self._category_index.get(category, ()))
 
-        if keys:
-            self.mark_dirty()
-            self.save(force=True)
+            for key in keys:
+                record = self.memory.pop(key, None)
+                if record is not None:
+                    self._index_remove(key, record)
+
+            if keys:
+                self.mark_dirty()
+                self.save(force=True)
 
         status = ActionStatus.SUCCESS if keys else ActionStatus.WARNING
         message = (
@@ -270,17 +337,21 @@ class MemoryManager:
         if not valid_new:
             return ActionResult(False, ActionStatus.ERROR, "memory", "rename", "No especificaste el nuevo nombre.")
 
-        if old_key not in self.memory:
-            return ActionResult(False, ActionStatus.WARNING, "memory", "rename", f"No existe '{old_key}' en memoria.")
-        if new_key in self.memory:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "rename", f"Ya existe una memoria llamada '{new_key}'.")
+        with self._lock:
+            if old_key not in self.memory:
+                return ActionResult(False, ActionStatus.WARNING, "memory", "rename", f"No existe '{old_key}' en memoria.")
+            if new_key in self.memory:
+                return ActionResult(False, ActionStatus.ERROR, "memory", "rename", f"Ya existe una memoria llamada '{new_key}'.")
 
-        record = self.memory.pop(old_key)
-        record["updated_at"] = self._now()
-        self.memory[new_key] = record
+            record = self.memory.pop(old_key)
+            self._index_remove(old_key, record)
 
-        self.mark_dirty()
-        self.save(force=True)
+            record["updated_at"] = self._now()
+            self.memory[new_key] = record
+            self._index_add(new_key, record)
+
+            self.mark_dirty()
+            self.save(force=True)
 
         return ActionResult(True, ActionStatus.SUCCESS, "memory", "rename", f"'{old_key}' ahora se llama '{new_key}'.", record)
 
@@ -289,25 +360,27 @@ class MemoryManager:
         source_key = self._normalize(data.get("key") or data.get("source_key"))
         target_key = self._normalize(data.get("new_key") or data.get("target_key"))
 
-        if source_key not in self.memory:
-            return ActionResult(False, ActionStatus.WARNING, "memory", "duplicate", f"No existe '{source_key}' en memoria.")
+        with self._lock:
+            if source_key not in self.memory:
+                return ActionResult(False, ActionStatus.WARNING, "memory", "duplicate", f"No existe '{source_key}' en memoria.")
 
-        valid_target, _ = self._validate_key(target_key)
-        if not valid_target:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "duplicate", "No especificaste el nombre de la copia.")
-        if target_key in self.memory:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "duplicate", f"Ya existe una memoria llamada '{target_key}'.")
+            valid_target, _ = self._validate_key(target_key)
+            if not valid_target:
+                return ActionResult(False, ActionStatus.ERROR, "memory", "duplicate", "No especificaste el nombre de la copia.")
+            if target_key in self.memory:
+                return ActionResult(False, ActionStatus.ERROR, "memory", "duplicate", f"Ya existe una memoria llamada '{target_key}'.")
 
-        record = json.loads(json.dumps(self.memory[source_key], default=str))
-        record["id"] = self._generate_id()
-        record["created_at"] = self._now()
-        record["updated_at"] = record["created_at"]
-        record["times_used"] = 0
-        record["last_access"] = None
+            record = json.loads(json.dumps(self.memory[source_key], default=str))
+            record["id"] = self._generate_id()
+            record["created_at"] = self._now()
+            record["updated_at"] = record["created_at"]
+            record["times_used"] = 0
+            record["last_access"] = None
 
-        self.memory[target_key] = record
-        self.mark_dirty()
-        self.save(force=True)
+            self.memory[target_key] = record
+            self._index_add(target_key, record)
+            self.mark_dirty()
+            self.save(force=True)
 
         return ActionResult(True, ActionStatus.SUCCESS, "memory", "duplicate", f"'{source_key}' duplicado como '{target_key}'.", record)
 
@@ -320,28 +393,39 @@ class MemoryManager:
         if not valid_target:
             return ActionResult(False, ActionStatus.ERROR, "memory", "merge", "No especificaste el nombre de la memoria combinada.")
 
-        existing = [self._normalize(k) for k in keys if self._normalize(k) in self.memory]
-        if not existing:
-            return ActionResult(False, ActionStatus.WARNING, "memory", "merge", "Ninguna de las memorias indicadas existe.")
+        with self._lock:
+            existing = [self._normalize(k) for k in keys if self._normalize(k) in self.memory]
+            if not existing:
+                return ActionResult(False, ActionStatus.WARNING, "memory", "merge", "Ninguna de las memorias indicadas existe.")
 
-        combined_value = "; ".join(str(self.memory[k]["value"]) for k in existing)
-        category = data.get("category") or self.memory[existing[0]].get("category")
-        importance = max(self.memory[k].get("importance", DEFAULT_IMPORTANCE) for k in existing)
+            combined_value = "; ".join(str(self.memory[k]["value"]) for k in existing)
+            category = data.get("category") or self.memory[existing[0]].get("category")
+            importance = max(self.memory[k].get("importance", DEFAULT_IMPORTANCE) for k in existing)
 
-        record = self._create_record(
-            combined_value,
-            category=self._normalize_category(category),
-            importance=self._clamp_importance(importance),
-            source="merge",
-        )
-        self.memory[target_key] = record
+            record = self._create_record(
+                combined_value,
+                category=self._normalize_category(category),
+                importance=self._clamp_importance(importance),
+                source="merge",
+            )
 
-        for key in existing:
-            if key != target_key:
-                del self.memory[key]
+            # Si target_key coincide con una clave ya existente (por ejemplo,
+            # una de las fuentes), primero se retira su entrada vieja del
+            # índice para no dejar referencias colgadas.
+            if target_key in self.memory:
+                self._index_remove(target_key, self.memory[target_key])
 
-        self.mark_dirty()
-        self.save(force=True)
+            self.memory[target_key] = record
+            self._index_add(target_key, record)
+
+            for key in existing:
+                if key != target_key:
+                    old = self.memory.pop(key, None)
+                    if old is not None:
+                        self._index_remove(key, old)
+
+            self.mark_dirty()
+            self.save(force=True)
 
         return ActionResult(
             True, ActionStatus.SUCCESS, "memory", "merge",
@@ -392,13 +476,21 @@ class MemoryManager:
         return result
 
     def find_by_category(self, category: str) -> dict:
+        """O(k): usa el índice invertido de categorías en vez de escanear toda la memoria."""
         category = self._normalize_category(category)
-        return {k: v for k, v in self.memory.items() if v.get("category") == category}
+        keys = self._category_index.get(category, ())
+        return {key: self.memory[key] for key in keys if key in self.memory}
 
     def find_by_tag(self, tag: str) -> dict:
-        return {k: v for k, v in self.memory.items() if tag in v.get("tags", [])}
+        """O(k): usa el índice invertido de etiquetas en vez de escanear toda la memoria."""
+        keys = self._tag_index.get(tag, ())
+        return {key: self.memory[key] for key in keys if key in self.memory}
 
     def find_by_alias(self, alias: str) -> dict:
+        # TODO: indexar aliases igual que categoría/tags si este método se
+        # vuelve un punto caliente. Se deja como escaneo lineal porque los
+        # aliases pueden repetirse entre memorias y el comportamiento
+        # original no define una política de desambiguación explícita.
         return {k: v for k, v in self.memory.items() if alias in v.get("aliases", [])}
 
     def find_by_importance(self, data: dict | int | None = None) -> dict:
@@ -424,10 +516,7 @@ class MemoryManager:
     # ==================================================
     def statistics(self, data: dict | None = None) -> ActionResult:
         """Estadísticas generales de memoria (formato original preservado)."""
-        categorias: dict[str, int] = {}
-        for record in self.memory.values():
-            cat = record.get("category", DEFAULT_CATEGORY)
-            categorias[cat] = categorias.get(cat, 0) + 1
+        categorias = self._category_counts()
 
         mas_usadas = sorted(self.memory.items(), key=lambda item: item[1].get("times_used", 0), reverse=True)[:5]
         ultimo_acceso = max(self.memory.items(), key=lambda item: item[1].get("last_access") or "", default=None)
@@ -464,18 +553,12 @@ class MemoryManager:
 
     def categories(self, data: dict | None = None) -> ActionResult:
         """Categorías existentes con su cantidad de memorias."""
-        categorias: dict[str, int] = {}
-        for record in self.memory.values():
-            cat = record.get("category", DEFAULT_CATEGORY)
-            categorias[cat] = categorias.get(cat, 0) + 1
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "categories", "Categorías disponibles.", categorias)
+        return ActionResult(True, ActionStatus.SUCCESS, "memory", "categories", "Categorías disponibles.", self._category_counts())
 
     def tags(self, data: dict | None = None) -> ActionResult:
         """Conjunto de todas las etiquetas usadas en memoria."""
-        todas: set[str] = set()
-        for record in self.memory.values():
-            todas.update(record.get("tags", []))
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "tags", "Etiquetas disponibles.", sorted(todas))
+        todas = sorted(tag for tag, keys in self._tag_index.items() if keys)
+        return ActionResult(True, ActionStatus.SUCCESS, "memory", "tags", "Etiquetas disponibles.", todas)
 
     def memory_size(self, data: dict | None = None) -> ActionResult:
         """Tamaño aproximado en bytes que ocupa la memoria serializada."""
@@ -536,9 +619,18 @@ class MemoryManager:
         text = data.get("text", "") if isinstance(data, dict) else str(data or "")
         limit = data.get("limit", DEFAULT_FIND_LIMIT) if isinstance(data, dict) else DEFAULT_FIND_LIMIT
 
-        scored = [(key, self.score_relevance(key, text), record) for key, record in self.memory.items()]
-        scored.sort(key=lambda item: item[1], reverse=True)
-        ranked = [{"key": k, "score": s, "record": r} for k, s, r in scored[:limit] if s > 0]
+        if not text:
+            return ActionResult(True, ActionStatus.SUCCESS, "memory", "rank_memories", "Memorias ordenadas por relevancia.", [])
+
+        # Se filtran los scores nulos ANTES de ordenar: evita ordenar
+        # entradas irrelevantes que de todas formas se descartarían después.
+        scored = (
+            (key, self.score_relevance(key, text), record)
+            for key, record in self.memory.items()
+        )
+        relevant = [item for item in scored if item[1] > 0]
+        relevant.sort(key=lambda item: item[1], reverse=True)
+        ranked = [{"key": k, "score": s, "record": r} for k, s, r in relevant[:limit]]
 
         return ActionResult(True, ActionStatus.SUCCESS, "memory", "rank_memories", "Memorias ordenadas por relevancia.", ranked)
 
@@ -604,9 +696,18 @@ class MemoryManager:
         category = record.get("category")
         tags = set(record.get("tags", []))
 
+        # Se usan los índices para acotar de entrada el universo de
+        # candidatos (misma categoría o alguna etiqueta compartida) en vez
+        # de recorrer toda la memoria desde cero.
+        candidate_keys = set(self._category_index.get(category, ()))
+        for tag in tags:
+            candidate_keys.update(self._tag_index.get(tag, ()))
+        candidate_keys.discard(key)
+
         candidates = []
-        for other_key, other in self.memory.items():
-            if other_key == key:
+        for other_key in candidate_keys:
+            other = self.memory.get(other_key)
+            if other is None:
                 continue
             overlap = len(tags.intersection(other.get("tags", [])))
             same_category = other.get("category") == category
@@ -638,13 +739,14 @@ class MemoryManager:
         Vuelca `self.memory` a disco SOLO si hay cambios pendientes
         (`self._dirty`) o si `force=True`. Devuelve True si escribió.
         """
-        if not (self._dirty or force):
-            return False
+        with self._lock:
+            if not (self._dirty or force):
+                return False
 
-        self._write_storage(MEMORY_PATH, self.memory)
-        self._dirty = False
-        self._last_saved_at = self._now()
-        return True
+            self._write_storage(MEMORY_PATH, self.memory)
+            self._dirty = False
+            self._last_saved_at = self._now()
+            return True
 
     def autosave(self, data: dict | None = None) -> ActionResult:
         """Punto de entrada explícito para volcar cambios pendientes (usa el dirty flag)."""
@@ -659,9 +761,10 @@ class MemoryManager:
     def export(self, data: dict | None = None) -> ActionResult:
         """Exporta la memoria completa a `data/memory.json` (o a `data.path` si se indica)."""
         path = (data.get("path") if data else None) or MEMORY_PATH
-        self._write_storage(path, self.memory)
-        self._dirty = False
-        self._last_saved_at = self._now()
+        with self._lock:
+            self._write_storage(path, self.memory)
+            self._dirty = False
+            self._last_saved_at = self._now()
         return ActionResult(True, ActionStatus.SUCCESS, "memory", "export", "Memoria exportada correctamente.", {"path": path})
 
     def import_memories(self, data: dict | None = None) -> ActionResult:
@@ -674,11 +777,13 @@ class MemoryManager:
             if not isinstance(contenido, dict):
                 raise ValueError("El archivo no contiene un objeto JSON válido.")
 
-            for key, record in contenido.items():
-                self.memory[self._normalize(key)] = self._normalize_record(record)
+            with self._lock:
+                for key, record in contenido.items():
+                    self.memory[self._normalize(key)] = self._normalize_record(record)
 
-            self.mark_dirty()
-            self.save(force=True)
+                self._index_rebuild()
+                self.mark_dirty()
+                self.save(force=True)
 
             return ActionResult(True, ActionStatus.SUCCESS, "memory", "import_memories", "Memoria importada correctamente.", self.memory)
         except Exception as exc:
@@ -687,7 +792,8 @@ class MemoryManager:
     def backup(self, data: dict | None = None) -> ActionResult:
         """Crea una copia de seguridad de la memoria actual."""
         path = (data.get("path") if data else None) or BACKUP_PATH
-        self._write_storage(path, self.memory)
+        with self._lock:
+            self._write_storage(path, self.memory)
         return ActionResult(True, ActionStatus.SUCCESS, "memory", "backup", f"Backup creado en {path}.", {"path": path})
 
     def restore(self, data: dict | None = None) -> ActionResult:
@@ -698,9 +804,11 @@ class MemoryManager:
         if not contenido:
             return ActionResult(False, ActionStatus.ERROR, "memory", "restore", "No se encontró backup.")
 
-        self.memory = {self._normalize(key): self._normalize_record(record) for key, record in contenido.items()}
-        self.mark_dirty()
-        self.save(force=True)
+        with self._lock:
+            self.memory = {self._normalize(key): self._normalize_record(record) for key, record in contenido.items()}
+            self._index_rebuild()
+            self.mark_dirty()
+            self.save(force=True)
 
         return ActionResult(True, ActionStatus.SUCCESS, "memory", "restore", "Memoria restaurada desde backup.")
 
@@ -783,6 +891,19 @@ class MemoryManager:
             return False, "El valor no puede ser una cadena vacía."
         return True, None
 
+    def _validate_key_value(self, key: Any, value: Any) -> bool:
+        """
+        Helper que consolida el patrón `_validate_key` + `_validate_value`
+        repetido en `remember()`/`update()`. No cambia los mensajes de
+        error públicos (esos siguen definidos en cada método llamador),
+        solo evita duplicar la lógica de validación.
+        """
+        valid_key, _ = self._validate_key(key)
+        if not valid_key:
+            return False
+        valid_value, _ = self._validate_value(value)
+        return valid_value
+
     def _create_record(
         self,
         value: Any,
@@ -843,6 +964,41 @@ class MemoryManager:
             self.memory[key]["times_used"] = self.memory[key].get("times_used", 0) + 1
             self.mark_dirty()
 
+    # --- Índices internos (categoría / etiquetas) ---------------------
+    def _index_add(self, key: str, record: dict) -> None:
+        """Agrega `key` a los índices invertidos de categoría y etiquetas según `record`."""
+        category = record.get("category", DEFAULT_CATEGORY)
+        self._category_index.setdefault(category, set()).add(key)
+        for tag in record.get("tags", []) or []:
+            self._tag_index.setdefault(tag, set()).add(key)
+
+    def _index_remove(self, key: str, record: dict) -> None:
+        """Retira `key` de los índices invertidos de categoría y etiquetas según `record`."""
+        category = record.get("category", DEFAULT_CATEGORY)
+        bucket = self._category_index.get(category)
+        if bucket is not None:
+            bucket.discard(key)
+            if not bucket:
+                del self._category_index[category]
+
+        for tag in record.get("tags", []) or []:
+            bucket = self._tag_index.get(tag)
+            if bucket is not None:
+                bucket.discard(key)
+                if not bucket:
+                    del self._tag_index[tag]
+
+    def _index_rebuild(self) -> None:
+        """Reconstruye ambos índices desde cero a partir de `self.memory`."""
+        self._category_index = {}
+        self._tag_index = {}
+        for key, record in self.memory.items():
+            self._index_add(key, record)
+
+    def _category_counts(self) -> dict[str, int]:
+        """Cantidad de memorias por categoría, calculada desde el índice invertido."""
+        return {category: len(keys) for category, keys in self._category_index.items() if keys}
+
     # ==================================================
     # 10. SERIALIZACIÓN
     # ==================================================
@@ -855,9 +1011,11 @@ class MemoryManager:
 
     def from_dict(self, data: dict) -> "MemoryManager":
         raw = data.get("memory", {}) if data else {}
-        self.memory = {self._normalize(key): self._normalize_record(record) for key, record in raw.items()}
-        self._last_saved_at = data.get("last_saved_at") if data else None
-        self.mark_dirty()
+        with self._lock:
+            self.memory = {self._normalize(key): self._normalize_record(record) for key, record in raw.items()}
+            self._index_rebuild()
+            self._last_saved_at = data.get("last_saved_at") if data else None
+            self.mark_dirty()
         return self
 
     # ==================================================
