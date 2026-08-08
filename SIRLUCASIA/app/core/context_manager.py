@@ -186,6 +186,18 @@ class ContextManager:
         module = data.get("module")
         command = data.get("command")
 
+        # El pipeline entrega el mensaje del usuario como `raw_message`
+        # (o `normalized`), así que se aceptan como origen alternativo.
+        user_message = (
+            data.get("user_message")
+            or data.get("raw_message")
+            or data.get("normalized")
+        )
+        assistant_message = (
+            data.get("assistant_message")
+            or data.get("answer")
+        )
+
         # ---- Tema ----
         if topic:
             self.current_topic = topic
@@ -247,15 +259,15 @@ class ContextManager:
             self.last_result = data["result"]
 
         # ---- Mensajes ----
-        if data.get("user_message") is not None:
-            self.last_user_message = data["user_message"]
-        if data.get("assistant_message") is not None:
-            self.last_assistant_message = data["assistant_message"]
+        if user_message is not None:
+            self.last_user_message = user_message
+        if assistant_message is not None:
+            self.last_assistant_message = assistant_message
 
         # ---- Historial corto ----
         self.history.append({
-            "usuario": data.get("user_message"),
-            "respuesta": data.get("assistant_message") or data.get("answer"),
+            "usuario": user_message,
+            "respuesta": assistant_message,
             "modulo": module,
             "comando": command,
             "tema": topic,
@@ -265,6 +277,23 @@ class ContextManager:
         self.timestamps["last_update"] = now
 
         self._log_debug()
+
+    # ==========================================
+    # Respuesta del asistente del turno actual
+    # ==========================================
+    def set_answer(self, answer):
+        """
+        Registra la respuesta del asistente para el turno ya abierto por
+        `update()`, sin abrir un turno nuevo.
+        """
+        if answer is None:
+            return
+
+        self.current_answer = answer
+        self.last_assistant_message = answer
+
+        if self.history:
+            self.history[-1]["respuesta"] = answer
 
     # ==========================================
     # Getters simples

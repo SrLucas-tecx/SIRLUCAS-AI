@@ -51,12 +51,15 @@ Contratos asumidos (a confirmar):
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.core.memory_manager import MemoryManager
 from app.core.knowledge_manager import KnowledgeManager
 from app.core.context_manager import ContextManager
 from app.core.task_executor import TaskExecutor
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationManager:
@@ -78,12 +81,12 @@ class ConversationManager:
         self.memory = memory or MemoryManager()
         self.knowledge = knowledge or KnowledgeManager()
         self.context = context or ContextManager()
-        self.task_executor = task_executor or TaskExecutor()
+        # TaskExecutor exige (router, event_bus): no se puede construir
+        # uno por defecto. Si no se inyecta, queda en None y `_run_task`
+        # simplemente no delega.
+        self.task_executor = task_executor
 
-        print("=" * 50)
-        print("[ConversationManager]")
-        print("Inicializado correctamente.")
-        print("=" * 50)
+        logger.info("[ConversationManager] Inicializado correctamente.")
 
     # ==================================================
     # Dispatcher (comportamiento original preservado)
@@ -198,6 +201,10 @@ class ConversationManager:
 
     def _run_task(self, data: dict) -> Any:
         """Delega en TaskExecutor. TODO: confirmar nombre real (run/execute/dispatch)."""
+        if self.task_executor is None:
+            logger.warning("[ConversationManager] Sin TaskExecutor inyectado: no se ejecuta la tarea.")
+            return None
+
         for method_name in ("run", "execute", "dispatch"):
             method = getattr(self.task_executor, method_name, None)
             if callable(method):

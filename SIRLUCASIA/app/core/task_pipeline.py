@@ -33,27 +33,29 @@ class TaskPipeline:
     def execute(self, message):
 
         if not isinstance(message, dict):
-            return [
-                ActionResult(
-                    success=False,
-                    status=ActionStatus.ERROR,
-                    module="assistant",
-                    command=None,
-                    message="Entrada inválida."
-                )
-            ]
+            return self._error("Entrada inválida.")
+
+        raw_message = message.get("raw_message") or message.get("normalized")
 
         # Resolver entidad
         message = self.entity.resolve(message)
+        if not isinstance(message, dict):
+            return self._error("El resolvedor de entidades devolvió un valor inválido.")
 
         # Resolver referencias
         message = self.reference.resolve(message)
+        if not isinstance(message, dict):
+            return self._error("El resolvedor de referencias devolvió un valor inválido.")
 
         # Resolver contexto
         message = self.context_resolver.resolve(message, self.context)
+        if not isinstance(message, dict):
+            return self._error("El resolvedor de contexto devolvió un valor inválido.")
 
         # Resolver intención
         message = self.intent.resolve(message)
+        if not isinstance(message, dict):
+            return self._error("El resolvedor de intención devolvió un valor inválido.")
 
         # ==============================
         # Si no entendió la intención
@@ -71,6 +73,7 @@ class TaskPipeline:
             ]
 
         # Actualizar contexto
+        message.setdefault("user_message", raw_message)
         self.context.update(message)
 
         # Planificar acciones
@@ -80,4 +83,24 @@ class TaskPipeline:
         actions = self.optimizer.optimize(actions, self.context)
 
         # Ejecutar acciones
-        return self.executor.execute(actions)
+        results = self.executor.execute(actions)
+
+        # Registrar la respuesta del asistente en el contexto
+        answer = next(
+            (r.message for r in results if isinstance(r, ActionResult) and r.message),
+            None
+        )
+        self.context.set_answer(answer)
+
+        return results
+
+    def _error(self, text):
+        return [
+            ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="assistant",
+                command=None,
+                message=text
+            )
+        ]

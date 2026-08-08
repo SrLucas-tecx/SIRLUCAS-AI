@@ -1,3 +1,11 @@
+import logging
+
+from app.core.action_result import ActionResult
+from app.core.action_status import ActionStatus
+
+logger = logging.getLogger(__name__)
+
+
 class TaskExecutor:
 
     def __init__(self, router, event_bus):
@@ -12,8 +20,7 @@ class TaskExecutor:
 
         for action in actions:
 
-            print("\n=== ACTION ===")
-            print(action.to_dict())
+            logger.debug("[TaskExecutor] Acción: %s", action.to_dict())
 
             try:
                 # Ejecutar la acción mediante el Router
@@ -26,13 +33,17 @@ class TaskExecutor:
                     action.fail()
 
             except Exception as e:
-                print(f"[TaskExecutor] Error ejecutando acción: {e}")
+                logger.exception("[TaskExecutor] Error ejecutando acción.")
 
                 action.fail()
 
-                # Si el router falla completamente,
-                # no tenemos un ActionResult válido.
-                result = None
+                # Si el router falla completamente no hay ActionResult:
+                # se construye uno de error para no propagar None a los
+                # listeners.
+                result = self._error_result(action, e)
+
+            if result is None:
+                result = self._error_result(action)
 
             # Publicar evento
             try:
@@ -40,11 +51,21 @@ class TaskExecutor:
                     "action.executed",
                     result
                 )
-            except Exception as e:
-                print(
-                    f"[TaskExecutor] Error al publicar evento: {e}"
-                )
+            except Exception:
+                logger.exception("[TaskExecutor] Error al publicar evento.")
 
             results.append(result)
 
         return results
+
+    def _error_result(self, action, error=None):
+        data = action.to_dict() if hasattr(action, "to_dict") else {}
+
+        return ActionResult(
+            success=False,
+            status=ActionStatus.ERROR,
+            module=data.get("module"),
+            command=data.get("command"),
+            message="No se pudo ejecutar la acción.",
+            error=str(error) if error is not None else None,
+        )

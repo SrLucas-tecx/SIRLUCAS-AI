@@ -1,4 +1,8 @@
 import json
+import logging
+import os
+
+logger = logging.getLogger(__name__)
 
 
 class JSONManager:
@@ -19,24 +23,29 @@ class JSONManager:
 
         except FileNotFoundError:
 
-            print(f"No existe el archivo '{path}'. Se creará uno nuevo.")
+            logger.info("No existe el archivo '%s'. Se creará uno nuevo.", path)
             return {}
 
         except json.JSONDecodeError as e:
 
-            print("Error en el JSON:")
-            print(f"Línea: {e.lineno}")
-            print(f"Columna: {e.colno}")
-            print(f"Mensaje: {e.msg}")
+            logger.error(
+                "Error en el JSON '%s' (línea %s, columna %s): %s",
+                path, e.lineno, e.colno, e.msg,
+            )
 
             return None
 
     @staticmethod
     def save(path, data):
 
+        # Escritura atómica: se vuelca a un temporal y se reemplaza el
+        # destino de una sola vez, para que una interrupción no deje el
+        # archivo original a medio escribir.
+        tmp_path = f"{path}.tmp"
+
         try:
 
-            with open(path, "w", encoding="utf-8") as file:
+            with open(tmp_path, "w", encoding="utf-8") as file:
 
                 json.dump(
                     data,
@@ -45,17 +54,24 @@ class JSONManager:
                     ensure_ascii=False
                 )
 
+                file.flush()
+                os.fsync(file.fileno())
+
+            os.replace(tmp_path, path)
+
             return True
 
         except Exception as e:
 
-            print(f"Error al guardar '{path}': {e}")
+            logger.error("Error al guardar '%s': %s", path, e)
+
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
             return False
-        
+
     @staticmethod
     def exists(path):
-       try:
-        with open(path, "r"):
-            return True
-       except FileNotFoundError:
-        return False
+        return os.path.isfile(path)

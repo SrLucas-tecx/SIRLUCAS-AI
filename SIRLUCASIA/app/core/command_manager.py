@@ -93,7 +93,7 @@ class CommandManager:
 
         print(f"Guardando: {key} = {value}")
 
-        self.memory.remember(key, value)
+        self.memory.remember({"key": key, "value": value})
 
         return f"Lo recordaré. ({key} = {value})"
 

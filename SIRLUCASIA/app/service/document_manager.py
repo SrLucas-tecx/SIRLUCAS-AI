@@ -1,4 +1,3 @@
-from fileinput import filename
 import os
 import shutil
 import re 
@@ -8,6 +7,21 @@ from app.database.document_database import DocumentDatabase
 from app.document.document_factory import DocumentFactory
 from app.core.action_result import ActionResult
 from app.core.action_status import ActionStatus
+
+
+# Nombres permitidos: letras unicode (acentos y ñ incluidos), dígitos,
+# guiones bajos (\w), espacios y guiones. Los separadores de ruta y los
+# puntos quedan fuera, así que ".." o "a/b" nunca pasan la validación.
+NAME_PATTERN = re.compile(r"[\w -]+", re.UNICODE)
+
+
+def _is_valid_name(name):
+    """True si `name` es un nombre de documento seguro (sin rutas)."""
+    if not name or not name.strip():
+        return False
+    if any(sep in name for sep in ("/", "\\", "..")):
+        return False
+    return bool(NAME_PATTERN.fullmatch(name))
 
 
 # ==================================================
@@ -82,7 +96,7 @@ class DocumentManager:
             )
 
         # Validar nombre
-        if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+        if not _is_valid_name(name):
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,
@@ -239,8 +253,12 @@ class DocumentManager:
 
         try:
             if extension in [".txt", ".md"]:
+                # Solo se antepone un salto de línea si el archivo ya
+                # tiene contenido, para no dejar una línea en blanco
+                # inicial.
+                prefix = "\n" if os.path.getsize(filepath) > 0 else ""
                 with open(filepath, "a", encoding="utf-8") as file:
-                    file.write("\n" + content)
+                    file.write(prefix + content)
             elif extension == ".docx":
                 from docx import Document
                 doc = Document(filepath)

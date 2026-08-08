@@ -1,6 +1,5 @@
-import random
 from app.core.memory_manager import MemoryManager
-from app.core.command_manager import CommandManager
+from app.core.chat_manager import ChatManager
 from app.modules.parser import Parser
 from app.core.context_manager import ContextManager
 from app.core.history_manager import HistoryManager
@@ -35,7 +34,6 @@ class Assistant:
 
         # Managers principales
         self.memory = MemoryManager()
-        self.command_manager = CommandManager(self.memory)
         self.context = ContextManager()
         self.history = HistoryManager()
         self.knowledge = KnowledgeManager()
@@ -43,6 +41,7 @@ class Assistant:
         self.system = SystemManager()
         self.document = DocumentManager()
         self.calculator = CalculatorManager()
+        self.conversation = ChatManager()
 
         # Router
         self.router = Router()
@@ -53,6 +52,7 @@ class Assistant:
         self.router.register("document", self.document)
         self.router.register("calculator", self.calculator)
         self.router.register("history", self.history)
+        self.router.register("conversation", self.conversation)
 
         # EventBus + Listeners (instancias persistentes)
         self.event_bus = EventBus()
@@ -105,14 +105,18 @@ class Assistant:
 
     def chat(self):
         while True:
-            raw_message = input("\nTú > ")
+            try:
+                raw_message = input("\nTú > ")
+            except (EOFError, KeyboardInterrupt):
+                self.stop()
+                break
 
             if raw_message.lower() in ["salir", "exit", "quit"]:
                 self.stop()
                 break
 
             # 🔑 Flujo simplificado
-            message = self.parser.parse(raw_message)
+            message = self.parser.parse(raw_message, self.context)
             result = self.pipeline.execute(message)
             response = self.response_formatter.format(result)
 
