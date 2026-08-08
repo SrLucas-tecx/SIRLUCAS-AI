@@ -1,41 +1,37 @@
 from datetime import datetime
 import uuid
 
+
 class Action:
     def __init__(
         self,
         module,
         command,
-        topic=None,        # ← NUEVO
+        topic=None,
         entity=None,
         parameters=None,
-        priority=0
+        priority=0,
     ):
         self.id = str(uuid.uuid4())
         self.module = module
         self.command = command
-        self.topic = topic   # ← NUEVO
+        self.topic = topic
         self.entity = entity
         self.parameters = parameters or {}
         self.priority = priority
         self.created_at = datetime.now()
         self.status = "pending"
 
-    # =====================================
     def complete(self):
         self.status = "completed"
 
-    # =====================================
     def fail(self):
         self.status = "failed"
 
-    # =====================================
     def running(self):
         self.status = "running"
 
-    # =====================================
     def to_dict(self):
-
         data = {
             "id": self.id,
             "module": self.module,
@@ -50,11 +46,10 @@ class Action:
 
         return data
 
-    # =====================================
     def __repr__(self):
         return (
             f"<Action "
             f"{self.module}.{self.command} "
-            f"topic={self.topic} "       # ← NUEVO
+            f"topic={self.topic} "
             f"status={self.status}>"
         )

@@ -1,12 +1,16 @@
 from app.core.actions import Action
 
+
 class ActionPlanner:
+
     def plan(self, message):
         if not isinstance(message, dict):
             return []
 
-        # Si el parser devuelve "result"
         data = message.get("result", message)
+
+        if not isinstance(data, dict):
+            return []
 
         print("ACTION PLANNER RECIBE:")
         print(data)
@@ -17,7 +21,7 @@ class ActionPlanner:
             command=data.get("command"),
             topic=data.get("topic"),
             entity=data.get("entity"),
-            parameters=data
+            parameters=data,
         )
 
         print("ACTION PLANNER CREA:")

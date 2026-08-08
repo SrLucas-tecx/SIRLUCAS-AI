@@ -1,3 +1,23 @@
+"""
+SystemManager
+=============
+
+Manager de dominio responsable de abrir, cerrar, reiniciar y consultar
+el estado de aplicaciones del sistema operativo para SIRLUCAS AI.
+
+LIMITACIÓN CONOCIDA (intencional): este módulo depende de comandos
+exclusivos de Windows (`taskkill`, `tasklist`) y de resolución de
+ejecutables al estilo Windows. El proyecto es Windows-only por
+decisión de arquitectura; no tiene ni debe tener manejo multiplataforma.
+
+DISEÑO: el registro de procesos abiertos por el asistente vive en
+`ProcessRegistry`, una clase auxiliar separada y thread-safe (protegida
+por `threading.RLock`), para que `SystemManager` no tenga que conocer
+detalles de sincronización ni de la estructura de datos interna.
+"""
+
+from __future__ import annotations
+
 import logging
 import subprocess
 import threading
@@ -11,10 +31,23 @@ from app.database.program_database import ProgramDatabase
 
 logger = logging.getLogger(__name__)
 
+# Segundos que se espera confirmación de un subprocess (terminate/kill,
+# o una llamada a taskkill/tasklist) antes de darlo por fallido/colgado.
 SUBPROCESS_TIMEOUT_SECONDS = 5
 
 
 class SystemCommand(StrEnum):
+    """
+    Comandos de dominio que SystemManager acepta vía `execute()`.
+
+    `exists()` e `is_open()` son métodos públicos válidos y se pueden
+    llamar directamente, pero NO se despachan vía `execute()`: su firma
+    es `(self, app: str)`, incompatible con el contrato
+    `method(data: dict)` que usa el dispatcher. Antes de esta versión,
+    enviar `{"command": "is_open", ...}` a `execute()` producía un
+    `AttributeError` no controlado (se pasaba el `dict` completo como
+    si fuera el string `app`).
+    """
     OPEN = "open"
     CLOSE = "close"
     RESTART = "restart"
@@ -22,6 +55,8 @@ class SystemCommand(StrEnum):
 
 @dataclass(slots=True)
 class TrackedProcess:
+    """Un proceso abierto por SIRLUCAS AI, con metadata para diagnóstico."""
+
     popen: subprocess.Popen
     app_alias: str
     opened_at: datetime = field(default_factory=datetime.now)
@@ -31,21 +66,40 @@ class TrackedProcess:
         return self.popen.pid
 
     def is_alive(self) -> bool:
+        # poll() consulta el handle específico del proceso que Popen
+        # mantiene internamente, no el número de PID crudo — por eso
+        # este diseño es inmune a la reutilización de PIDs por parte
+        # de Windows tras la terminación del proceso original.
         return self.popen.poll() is None
 
 
 class ProcessRegistry:
+    """
+    Registro thread-safe de los procesos que el propio SystemManager
+    abrió, agrupados por nombre de ejecutable.
+
+    Toda mutación pasa por `self._lock`, evitando condiciones de
+    carrera si `open()`/`close()` llegan a invocarse desde hilos
+    distintos en el futuro.
+    """
+
     def __init__(self) -> None:
         self._by_program: dict[str, list[TrackedProcess]] = {}
         self._lock = threading.RLock()
 
     def track(self, program: str, popen: subprocess.Popen, app_alias: str) -> None:
+        """Registra un proceso recién abierto. Nunca sobrescribe instancias previas."""
         with self._lock:
             self._by_program.setdefault(program, []).append(
                 TrackedProcess(popen=popen, app_alias=app_alias)
             )
 
     def alive_for(self, program: str) -> list[TrackedProcess]:
+        """
+        Devuelve los procesos vivos de `program`, purgando en el mismo
+        paso los que ya terminaron por su cuenta (limpieza automática:
+        nunca queda una lista vacía almacenada).
+        """
         with self._lock:
             entries = self._by_program.get(program, [])
             alive = [p for p in entries if p.is_alive()]
@@ -56,6 +110,7 @@ class ProcessRegistry:
             return list(alive)
 
     def update(self, program: str, still_alive: list[TrackedProcess]) -> None:
+        """Reemplaza el registro de `program` tras un intento de cierre."""
         with self._lock:
             if still_alive:
                 self._by_program[program] = still_alive
@@ -64,102 +119,185 @@ class ProcessRegistry:
 
 
 class SystemManager:
+    """Abre, cierra, reinicia y consulta el estado de aplicaciones del SO."""
+
     _DISPATCHABLE_COMMANDS = frozenset(c.value for c in SystemCommand)
 
     def __init__(self) -> None:
         self.database = ProgramDatabase()
         self._registry = ProcessRegistry()
-        logger.info("[SystemManager] Inicializado. %d aplicaciones registradas.", len(self.database.list()))
 
+        logger.info(
+            "[SystemManager] Inicializado. %d aplicaciones registradas.",
+            len(self.database.list()),
+        )
+
+    # ==================================================
+    # Router / dispatcher
+    # ==================================================
     def execute(self, data: dict) -> ActionResult:
+        """Despacha `data['command']` al método correspondiente de esta clase."""
         command = data.get("command")
+
         if command not in self._DISPATCHABLE_COMMANDS:
             return self._error(command, f"No existe la acción '{command}'.")
+
         method = getattr(self, command, None)
         if not callable(method):
+            # Defensa en profundidad: no debería ocurrir si
+            # _DISPATCHABLE_COMMANDS está sincronizado con los métodos
+            # reales, pero se verifica de todas formas antes de invocar.
             logger.error("Comando '%s' está en la whitelist pero no es invocable.", command)
             return self._error(command, f"No existe la acción '{command}'.")
+
         return method(data)
 
+    # ==================================================
+    # Verificar existencia
+    # ==================================================
     def exists(self, name: str) -> bool:
+        """True si `name` corresponde a una aplicación registrada."""
         if not name:
             return False
         return self.database.find(name) is not None
 
+    # ==================================================
+    # Abrir aplicación
+    # ==================================================
     def open(self, data: dict) -> ActionResult:
+        """Abre la aplicación indicada en `data['topic']` y rastrea su proceso."""
         app = data.get("topic")
         if not app:
             return self._error("open", "No especificaste qué aplicación abrir.")
+
         program = self.database.find(app)
         if program is None:
             return self._error("open", f"No conozco la aplicación '{app}'.")
+
         try:
-            popen = subprocess.Popen(
-                [program],
-                shell=False,
-                close_fds=False
-            )
+            popen = subprocess.Popen(program)
         except OSError as e:
+            # Ejecutable no encontrado, ruta inválida, permisos: un
+            # desenlace esperable del dominio.
             logger.warning("No pude abrir '%s' (%s): %s", app, program, e)
             return self._error("open", f"No pude abrir {app}.", error=str(e))
         except Exception as e:
             logger.exception("Error inesperado abriendo '%s' (%s).", app, program)
             return self._error("open", f"No pude abrir {app}.", error=str(e))
-        self._registry.track(program, popen, app)
-        return self._success("open", f"Abriendo {app}...", data={"program": app, "pid": popen.pid})
 
+        self._registry.track(program, popen, app)
+
+        return self._success(
+            "open", f"Abriendo {app}...", data={"program": app, "pid": popen.pid}
+        )
+
+    # ==================================================
+    # Cerrar aplicación
+    # ==================================================
     def close(self, data: dict) -> ActionResult:
+        """
+        Cierra la aplicación indicada en `data['topic']`.
+
+        Si el asistente tiene procesos rastreados de esa aplicación
+        (abiertos por `open()`), cierra únicamente esos, por PID,
+        esperando confirmación real de terminación. Si no hay ningún
+        proceso rastreado (por ejemplo, la app fue abierta manualmente
+        por el usuario), recurre a `taskkill /IM` como mecanismo de
+        respaldo.
+        """
         app = data.get("topic")
         if not app:
             return self._error("close", "No especificaste qué aplicación cerrar.")
+
         program = self.database.find(app)
         if program is None:
             return self._error("close", f"No conozco la aplicación '{app}'.")
+
         tracked = self._registry.alive_for(program)
         if tracked:
             return self._close_tracked(app, program, tracked)
         return self._close_by_name(app, program)
 
-    def _close_tracked(self, app: str, program: str, tracked: list[TrackedProcess]) -> ActionResult:
-        closed, still_alive, failures = [], [], []
+    def _close_tracked(
+        self, app: str, program: str, tracked: list[TrackedProcess]
+    ) -> ActionResult:
+        """Cierra por PID los procesos que el propio asistente abrió."""
+        closed: list[TrackedProcess] = []
+        still_alive: list[TrackedProcess] = []
+        failures: list[str] = []
+
         for entry in tracked:
             if self._terminate_and_wait(entry):
                 closed.append(entry)
             else:
                 still_alive.append(entry)
                 failures.append(f"PID {entry.pid} sigue activo.")
+
         self._registry.update(program, still_alive)
+
         if not still_alive:
             return self._success("close", f"{app} cerrado correctamente.")
-        message = f"No pude cerrar completamente {app}." if closed else f"No pude cerrar {app}."
+
+        message = (
+            f"No pude cerrar completamente {app}." if closed else f"No pude cerrar {app}."
+        )
         return self._error("close", message, error="; ".join(failures))
 
     def _terminate_and_wait(self, entry: TrackedProcess) -> bool:
+        """
+        Intenta cerrar el proceso de `entry`, esperando confirmación
+        real antes de devolver True. Usa `logger.warning()` para
+        desenlaces esperables (timeout, proceso ya inexistente) y
+        `logger.exception()` solo para errores realmente inesperados.
+        """
         popen = entry.popen
         try:
             popen.terminate()
             popen.wait(timeout=SUBPROCESS_TIMEOUT_SECONDS)
             return True
+
         except ProcessLookupError:
-            logger.warning("PID %s ('%s') ya no existía al intentar cerrarlo.", entry.pid, entry.app_alias)
+            logger.warning(
+                "PID %s ('%s') ya no existía al intentar cerrarlo.",
+                entry.pid, entry.app_alias,
+            )
             return True
+
         except subprocess.TimeoutExpired:
-            logger.warning("PID %s ('%s') no respondió a terminate(); forzando kill().", entry.pid, entry.app_alias)
+            logger.warning(
+                "PID %s ('%s') no respondió a terminate() en %ss; forzando kill().",
+                entry.pid, entry.app_alias, SUBPROCESS_TIMEOUT_SECONDS,
+            )
             try:
                 popen.kill()
                 popen.wait(timeout=SUBPROCESS_TIMEOUT_SECONDS)
                 return True
             except subprocess.TimeoutExpired:
-                logger.warning("PID %s ('%s') sigue activo incluso tras kill().", entry.pid, entry.app_alias)
+                logger.warning(
+                    "PID %s ('%s') sigue activo incluso tras kill().",
+                    entry.pid, entry.app_alias,
+                )
                 return False
             except Exception:
-                logger.exception("Error inesperado forzando el cierre del PID %s ('%s').", entry.pid, entry.app_alias)
+                logger.exception(
+                    "Error inesperado forzando el cierre del PID %s ('%s').",
+                    entry.pid, entry.app_alias,
+                )
                 return False
+
         except Exception:
-            logger.exception("Error inesperado cerrando el proceso PID %s ('%s').", entry.pid, entry.app_alias)
+            logger.exception(
+                "Error inesperado cerrando el proceso PID %s ('%s').",
+                entry.pid, entry.app_alias,
+            )
             return False
 
     def _close_by_name(self, app: str, program: str) -> ActionResult:
+        """
+        Respaldo: cierra por nombre de ejecutable vía `taskkill /IM`.
+        Se usa solo cuando no hay procesos rastreados por el asistente
+        para esa aplicación.
+        """
         try:
             result = subprocess.run(
                 ["taskkill", "/IM", program, "/F"],
@@ -169,40 +307,71 @@ class SystemManager:
             )
         except subprocess.TimeoutExpired:
             logger.warning("taskkill no respondió a tiempo cerrando '%s' (%s).", app, program)
-            return self._error("close", f"No pude cerrar {app}.", error="taskkill no respondió...")
+            return self._error("close", f"No pude cerrar {app}.", error="taskkill no respondió a tiempo.")
         except Exception as e:
             logger.exception("Error inesperado ejecutando taskkill para '%s' (%s).", app, program)
             return self._error("close", f"No pude cerrar {app}.", error=str(e))
+
         if result.returncode == 0:
             return self._success("close", f"{app} cerrado correctamente.")
+
         stderr = (result.stderr or "").strip()
-        stderr_lower = stderr.casefold()
-        if "not found" in stderr_lower or "no se encontro" in stderr_lower:
+        stderr_lower = stderr.lower()
+
+        if "not found" in stderr_lower or "no se encontr" in stderr_lower:
+            logger.warning("'%s' (%s) no estaba abierto.", app, program)
             return self._error("close", f"{app} no está abierto.", error=stderr)
+
         if "denied" in stderr_lower or "denegado" in stderr_lower:
-            return self._error("close", f"No tengo permisos para cerrar {app}.", error=stderr)
+            logger.warning("Permiso denegado cerrando '%s' (%s).", app, program)
+            return self._error(
+                "close", f"No tengo permisos para cerrar {app}.", error=stderr
+            )
+
         logger.warning("taskkill no pudo cerrar '%s' (%s): %s", app, program, stderr)
         return self._error("close", f"No pude cerrar {app}.", error=stderr)
 
+    # ==================================================
+    # Reiniciar aplicación
+    # ==================================================
     def restart(self, data: dict) -> ActionResult:
+        """
+        Reinicia la aplicación indicada en `data['topic']`.
+
+        Si no está abierta, simplemente la abre (no tiene sentido
+        fallar un "reinicio" de algo que no estaba corriendo). Si está
+        abierta, la cierra y luego la abre.
+        """
         app = data.get("topic")
         if not app:
             return self._error("restart", "No especificaste qué aplicación reiniciar.")
+
         if not self.is_open(app):
             return self.open(data)
+
         close_result = self.close(data)
         if not close_result.success:
             return close_result
+
         return self.open(data)
 
+    # ==================================================
+    # Verificar si está abierto
+    # ==================================================
     def is_open(self, app: str) -> bool:
+        """True si hay al menos un proceso de `app` corriendo en el sistema."""
         if not app:
             return False
+
         program = self.database.find(app)
         if program is None:
             return False
+
+        # Atajo: si ya tenemos un proceso rastreado y vivo para este
+        # ejecutable, no hace falta ni siquiera consultar tasklist.
         if self._registry.alive_for(program):
             return True
+
         try:
             result = subprocess.run(
                 ["tasklist", "/FI", f"IMAGENAME eq {program}"],
@@ -210,27 +379,34 @@ class SystemManager:
                 text=True,
                 timeout=SUBPROCESS_TIMEOUT_SECONDS,
             )
-            lines = result.stdout.lower().splitlines()
-            return any(line.strip().startswith(program.lower()) for line in lines)
+            return program.lower() in result.stdout.lower()
         except subprocess.TimeoutExpired:
             logger.warning("tasklist no respondió a tiempo consultando '%s'.", program)
             return False
         except Exception:
+            # A diferencia de "el proceso no existe" (esperable), que
+            # tasklist no pueda ejecutarse en absoluto (comando no
+            # encontrado, permisos, etc.) es un fallo inesperado del
+            # entorno, no un resultado normal del dominio.
             logger.exception("No se pudo consultar tasklist para '%s'.", program)
             return False
 
+    # ==================================================
+    # Helpers de construcción de ActionResult (DRY)
+    # ==================================================
     @staticmethod
     def _success(command: str, message: str, *, data: dict | None = None) -> ActionResult:
-        return ActionResult(success=True, status=ActionStatus.SUCCESS, module="system", command=command, message=message, data=data)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="system",
+            command=command,
+            message=message,
+            data=data,
+        )
 
     @staticmethod
-    def _error(
-        command: str | None,
-        message: str,
-        *,
-        error: str | None = None,
-        data: dict | None = None,
-    ) -> ActionResult:
+    def _error(command: str | None, message: str, *, error: str | None = None) -> ActionResult:
         return ActionResult(
             success=False,
             status=ActionStatus.ERROR,
@@ -238,5 +414,4 @@ class SystemManager:
             command=command,
             message=message,
             error=error,
-            data=data,
         )

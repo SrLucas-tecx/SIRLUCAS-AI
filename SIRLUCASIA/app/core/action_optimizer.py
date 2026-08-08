@@ -9,31 +9,28 @@ class ActionOptimizer:
 
         for action in actions:
 
-            # ----------------------------
+            # ==========================
             # DOCUMENTOS
-            # ----------------------------
-
+            # ==========================
             if action.module == "document":
 
                 if not action.topic:
                     action.topic = context.document()
 
-                if action.command == "write" and not getattr(action, "content", None):
+                if action.command == "write" and not action.parameters.get("content"):
                     continue
 
-            # ----------------------------
+            # ==========================
             # SISTEMA
-            # ----------------------------
-
+            # ==========================
             elif action.module == "system":
 
                 if not action.topic:
                     action.topic = context.program()
 
-            # ----------------------------
+            # ==========================
             # WEB
-            # ----------------------------
-
+            # ==========================
             elif action.module == "web":
 
                 if not action.topic:

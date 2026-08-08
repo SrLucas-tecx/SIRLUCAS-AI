@@ -217,10 +217,22 @@
     "priority": 10,
     "regex": [
       "^cierra (.+)$",
+      "^cerrar (.+)$",
       "^termina (.+)$",
       "^finaliza (.+)$"
     ],
     "command": "close",
+    "topic_group": 1
+  },
+  {
+    "name": "reiniciar_app",
+    "module": "system",
+    "priority": 10,
+    "regex": [
+      "^reinicia (.+)$",
+      "^reiniciar (.+)$"
+    ],
+    "command": "restart",
     "topic_group": 1
   },
   {

@@ -1,6 +1,7 @@
 from app.core.action_result import ActionResult
 from app.core.action_status import ActionStatus
 
+
 class Router:
 
     def __init__(self):
@@ -18,36 +19,22 @@ class Router:
                 status=ActionStatus.ERROR,
                 module="router",
                 command=None,
-                message="Datos inválidos: se esperaba un diccionario."
+                message="Datos inválidos: se esperaba un diccionario.",
             )
 
+        module_name = (data.get("module") or "").lower()
         command = data.get("command")
-        topic = data.get("topic")
 
-        # ---------- OPEN ----------
-        if command == "open":
-            response = self._resolve_open(topic)
-            if response is not None:
-                return response
-
-        # ---------- CLOSE ----------
-        if command == "close":
-            response = self._resolve_close(topic)
-            if response is not None:
-                return response
-
-        module = (data.get("module") or "").lower()
-
-        if not module:
+        if not module_name:
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,
                 module="router",
                 command=command,
-                message="No se especificó el módulo."
+                message="No se especificó el módulo.",
             )
 
-        manager = self.modules.get(module)
+        manager = self.modules.get(module_name)
 
         if manager is None:
             return ActionResult(
@@ -55,52 +42,39 @@ class Router:
                 status=ActionStatus.ERROR,
                 module="router",
                 command=command,
-                message=f"No existe el módulo '{module}'."
+                message=f"No existe el módulo '{module_name}'.",
             )
 
-        response = manager.execute(data)
+        try:
+            response = manager.execute(data)
+
+        except Exception as e:
+            print(
+                f"[Router] Error ejecutando "
+                f"{module_name}.{command}: {e}"
+            )
+
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module=module_name,
+                command=command,
+                message=f"Error ejecutando la acción '{command}'.",
+                error=str(e),
+            )
+
+        # ==============================
+        # MEMORIA
+        # ==============================
 
         memory = self.modules.get("memory")
+
         if memory:
             try:
                 memory.remember(data)
             except Exception as e:
-                print(f"[Router] Error en memory.remember: {e}")
+                print(
+                    f"[Router] Error en memory.remember: {e}"
+                )
 
         return response
-
-    # ==================================================
-    # Resolver OPEN
-    # ==================================================
-    def _resolve_open(self, topic):
-        system = self.modules.get("system")
-        document = self.modules.get("document")
-
-        if system:
-            program = system.database.find(topic)
-            if program:
-                return system.open({"topic": topic})
-
-        if document:
-            if document.exists(topic):
-                return document.open({"topic": topic})
-
-        return None
-
-    # ==================================================
-    # Resolver CLOSE
-    # ==================================================
-    def _resolve_close(self, topic):
-        system = self.modules.get("system")
-        document = self.modules.get("document")
-
-        if system:
-            program = system.database.find(topic)
-            if program:
-                return system.close({"topic": topic})
-
-        if document:
-            if document.exists(topic):
-                return document.close({"topic": topic})
-
-        return None
