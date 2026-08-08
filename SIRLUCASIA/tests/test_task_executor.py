@@ -1,3 +1,5 @@
+from app.core.action_result import ActionResult
+from app.core.action_status import ActionStatus
 from app.core.task_executor import TaskExecutor
 
 
@@ -9,6 +11,12 @@ class FakeAction:
     def to_dict(self):
         return self.data
 
+    def complete(self):
+        pass
+
+    def fail(self):
+        pass
+
 
 class FakeRouter:
 
@@ -17,7 +25,13 @@ class FakeRouter:
 
     def route(self, data):
         self.called = True
-        return f"RESULTADO: {data['command']}"
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module=data.get("module"),
+            command=data.get("command"),
+            message=f"RESULTADO: {data['command']}",
+        )
 
 
 class FakeEventBus:
@@ -53,7 +67,7 @@ def test_execute_actions():
     assert router.called is True
     assert event_bus.called is True
     assert event_bus.event == "action.executed"
-    assert results == ["RESULTADO: open"]
+    assert [r.message for r in results] == ["RESULTADO: open"]
 
 
 def test_multiple_actions():
@@ -72,9 +86,11 @@ def test_multiple_actions():
     results = executor.execute(actions)
 
     assert len(results) == 3
-    assert results[0] == "RESULTADO: uno"
-    assert results[1] == "RESULTADO: dos"
-    assert results[2] == "RESULTADO: tres"
+    assert [r.message for r in results] == [
+        "RESULTADO: uno",
+        "RESULTADO: dos",
+        "RESULTADO: tres",
+    ]
 
 
 def test_publish_exception_does_not_stop_execution():
@@ -93,4 +109,37 @@ def test_publish_exception_does_not_stop_execution():
 
     results = executor.execute(actions)
 
-    assert results == ["RESULTADO: open"]
+    assert [r.message for r in results] == ["RESULTADO: open"]
+
+
+def test_router_none_publishes_error_result():
+
+    class NoneRouter:
+        def route(self, data):
+            return None
+
+    event_bus = FakeEventBus()
+    executor = TaskExecutor(NoneRouter(), event_bus)
+
+    results = executor.execute([FakeAction({"module": "system", "command": "open"})])
+
+    assert isinstance(results[0], ActionResult)
+    assert results[0].success is False
+    assert event_bus.data is results[0]
+
+
+def test_router_exception_publishes_error_result():
+
+    class BrokenRouter:
+        def route(self, data):
+            raise RuntimeError("boom")
+
+    event_bus = FakeEventBus()
+    executor = TaskExecutor(BrokenRouter(), event_bus)
+
+    results = executor.execute([FakeAction({"module": "system", "command": "open"})])
+
+    assert isinstance(results[0], ActionResult)
+    assert results[0].success is False
+    assert results[0].error == "boom"
+    assert event_bus.data is not None

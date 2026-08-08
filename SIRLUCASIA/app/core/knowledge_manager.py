@@ -20,11 +20,11 @@ class KnowledgeManager:
 
     def execute(self, data):
 
-        command = data.get("command")
+        command = data.get("command") if isinstance(data, dict) else None
 
-        method = getattr(self, command, None)
+        method = getattr(self, command, None) if command else None
 
-        if method is None:
+        if method is None or not callable(method) or command.startswith("_"):
 
             return ActionResult(
                 success=False,

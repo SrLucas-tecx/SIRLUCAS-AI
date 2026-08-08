@@ -86,7 +86,9 @@ def test_invalid_data():
     assert "inválidos" in result.message.lower()
 
 
-def test_memory_called():
+def test_memory_not_called_on_other_modules():
+    # El Router ya no persiste memoria como efecto secundario de cada
+    # ruta: solo el MemoryManager enrutado explícitamente lo hace.
     router = Router()
     module = FakeModule()
     memory = FakeMemory()
@@ -94,7 +96,7 @@ def test_memory_called():
     router.register("memory", memory)
 
     router.route({"module": "test"})
-    assert memory.saved
+    assert memory.saved is False
 
 
 def test_open_program():

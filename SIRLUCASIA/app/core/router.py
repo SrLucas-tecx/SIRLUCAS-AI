@@ -1,5 +1,9 @@
+import logging
+
 from app.core.action_result import ActionResult
 from app.core.action_status import ActionStatus
+
+logger = logging.getLogger(__name__)
 
 
 class Router:
@@ -9,7 +13,7 @@ class Router:
 
     def register(self, name, module):
         self.modules[name.lower()] = module
-        print(f"[Router] Módulo registrado -> {name.lower()}")
+        logger.info("[Router] Módulo registrado -> %s", name.lower())
 
     def route(self, data):
 
@@ -49,9 +53,8 @@ class Router:
             response = manager.execute(data)
 
         except Exception as e:
-            print(
-                f"[Router] Error ejecutando "
-                f"{module_name}.{command}: {e}"
+            logger.exception(
+                "[Router] Error ejecutando %s.%s", module_name, command
             )
 
             return ActionResult(
@@ -63,18 +66,7 @@ class Router:
                 error=str(e),
             )
 
-        # ==============================
-        # MEMORIA
-        # ==============================
-
-        memory = self.modules.get("memory")
-
-        if memory:
-            try:
-                memory.remember(data)
-            except Exception as e:
-                print(
-                    f"[Router] Error en memory.remember: {e}"
-                )
-
+        # La persistencia en memoria ocurre únicamente cuando el intent
+        # es de memoria y el Router despacha al MemoryManager, nunca como
+        # efecto secundario de cualquier otra ruta.
         return response

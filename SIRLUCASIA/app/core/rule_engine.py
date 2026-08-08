@@ -1,4 +1,7 @@
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 
 class RuleEngine:
@@ -13,17 +16,17 @@ class RuleEngine:
 
         for rule in self.rules:
 
-            for regex in rule["regex"]:
+            for regex in rule.get("regex", []):
 
-                match = re.match(regex, text)
+                match = re.fullmatch(regex, text)
 
                 if not match:
                     continue
 
                 result = {
-                    "rule": rule["name"],
-                    "module": rule["module"],
-                    "command": rule["command"]
+                    "rule": rule.get("name"),
+                    "module": rule.get("module"),
+                    "command": rule.get("command")
                 }
 
                 # ===============================
@@ -59,7 +62,7 @@ class RuleEngine:
                     elif value == 0:
                         result[field] = match.group(0).strip()
 
-                print(f"[RuleEngine] -> {result}")
+                logger.debug("[RuleEngine] -> %s", result)
 
                 return result
 

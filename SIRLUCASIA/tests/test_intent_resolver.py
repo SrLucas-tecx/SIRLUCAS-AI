@@ -1,3 +1,5 @@
+import pytest
+
 from app.core.intent_resolver import IntentResolver
 
 
@@ -141,6 +143,75 @@ def test_chat():
     assert data["intent"] == "CHAT"
 
 
+def test_restart_program():
+
+    resolver = IntentResolver()
+
+    data = resolver.resolve({
+        "module": "system",
+        "command": "restart"
+    })
+
+    assert data["intent"] == "RESTART_PROGRAM"
+
+
+@pytest.mark.parametrize(
+    "command, intent",
+    [
+        ("rename", "RENAME_DOCUMENT"),
+        ("copy", "COPY_DOCUMENT"),
+        ("move", "MOVE_DOCUMENT"),
+        ("list_documents", "LIST_DOCUMENTS"),
+        ("info", "INFO_DOCUMENT"),
+        ("search", "SEARCH_DOCUMENT"),
+        ("modified", "MODIFIED_DOCUMENT"),
+    ],
+)
+def test_document_commands(command, intent):
+
+    resolver = IntentResolver()
+
+    data = resolver.resolve({
+        "module": "document",
+        "command": command
+    })
+
+    assert data["intent"] == intent
+
+
+def test_list_memory():
+
+    resolver = IntentResolver()
+
+    data = resolver.resolve({
+        "module": "memory",
+        "command": "list"
+    })
+
+    assert data["intent"] == "LIST_MEMORY"
+
+
+@pytest.mark.parametrize(
+    "command, intent",
+    [
+        ("history", "READ_HISTORY"),
+        ("last", "LAST_HISTORY"),
+        ("search", "SEARCH_HISTORY"),
+        ("clear", "CLEAR_HISTORY"),
+    ],
+)
+def test_history_commands(command, intent):
+
+    resolver = IntentResolver()
+
+    data = resolver.resolve({
+        "module": "history",
+        "command": command
+    })
+
+    assert data["intent"] == intent
+
+
 def test_unknown_module():
 
     resolver = IntentResolver()
@@ -149,7 +220,21 @@ def test_unknown_module():
         "module": "fake"
     })
 
-    assert data["intent"] is None
+    assert data["intent"] == "UNKNOWN"
+    assert data["module"] == "unknown"
+
+
+def test_unknown_command_falls_back_to_unknown():
+
+    resolver = IntentResolver()
+
+    data = resolver.resolve({
+        "module": "system",
+        "command": "no_existe"
+    })
+
+    assert data["intent"] == "UNKNOWN"
+    assert data["module"] == "unknown"
 
 
 def test_invalid_data():

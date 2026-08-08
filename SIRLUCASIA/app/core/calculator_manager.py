@@ -171,16 +171,15 @@ class CalculatorManager:
         if len(expression) > 500:
             raise ValueError("La expresión es demasiado larga.")
 
-        if sum(1 for _ in ast.walk(tree)) > 100:
-            raise ValueError("Expresión demasiado compleja.")
-
         # Reemplazar ^ por ** antes de parsear
-        supports_power = "^" in self.database.data or "**" in self.database.data
-
         if "^" in self.database.data:
             expression = expression.replace("^", "**")
 
         tree = ast.parse(expression, mode="eval")
+
+        if sum(1 for _ in ast.walk(tree)) > 100:
+            raise ValueError("Expresión demasiado compleja.")
+
         return self._eval_node(tree.body)
 
     def _eval_node(self, node: ast.AST) -> Number:

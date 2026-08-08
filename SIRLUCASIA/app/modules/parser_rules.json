@@ -350,7 +350,7 @@
       "^muestrame mis documentos$",
       "^que documentos tengo$"
     ],
-    "command": "list"
+    "command": "list_documents"
   },
   {
     "name": "informacion_documento",
@@ -383,7 +383,7 @@
   },
   {
     "name": "historial",
-    "module": "conversation",
+    "module": "history",
     "priority": 20,
     "regex": [
       "^historial$",
