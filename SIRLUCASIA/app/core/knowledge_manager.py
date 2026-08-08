@@ -1,6 +1,11 @@
+import logging
+
 from app.database.knowledge_database import KnowledgeDatabase
 from app.core.action_result import ActionResult
 from app.core.action_status import ActionStatus
+
+
+logger = logging.getLogger(__name__)
 
 
 class KnowledgeManager:
@@ -9,10 +14,10 @@ class KnowledgeManager:
 
         self.database = KnowledgeDatabase()
 
-        print("=" * 50)
-        print("[KnowledgeManager]")
-        print(f"{len(self.database.list())} conocimientos cargados.")
-        print("=" * 50)
+        logger.info(
+            "[KnowledgeManager] %d conocimientos cargados.",
+            len(self.database.list())
+        )
 
     # ==========================================
     # Router
@@ -24,8 +29,11 @@ class KnowledgeManager:
 
         method = getattr(self, command, None) if command else None
 
-        if method is None or not callable(method) or command.startswith("_"):
-
+        if (
+            method is None
+            or not callable(method)
+            or command.startswith("_")
+        ):
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,

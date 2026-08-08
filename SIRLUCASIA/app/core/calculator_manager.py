@@ -74,8 +74,19 @@ class CalculatorManager:
     # ==========================================
     def execute(self, data: dict[str, object]) -> ActionResult:
         command = data.get("command")
+
+        if not isinstance(command, str) or not command:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="calculator",
+                command=command,
+                message="No especificaste una acción.",
+            )
+
         method = getattr(self, command, None)
-        if method is None:
+
+        if method is None or not callable(method):
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,
@@ -83,13 +94,14 @@ class CalculatorManager:
                 command=command,
                 message=f"No existe la acción '{command}'.",
             )
+
         return method(data)
 
     # ==========================================
     # Calcular
     # ==========================================
     def calculate(self, data: dict) -> ActionResult:
-        expression = data.get("topic")
+        expression = data.get("topic") or data.get("expression") or data.get("value")
         if not expression:
             return ActionResult(
                 success=False,
