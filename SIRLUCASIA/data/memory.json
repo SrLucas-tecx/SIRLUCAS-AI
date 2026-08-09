@@ -1,17 +1,4 @@
 {
-    "nombre": {
-        "id": "a30b8dd6c29d4bcaa94d15757a1d05f6",
-        "value": "sirlucas",
-        "category": "personal",
-        "created_at": "2026-08-05T11:22:32.634797",
-        "updated_at": "2026-08-08T11:24:52.534962",
-        "importance": 2,
-        "source": "user",
-        "times_used": 0,
-        "last_access": null,
-        "aliases": [],
-        "tags": []
-    },
     "profesion": {
         "id": "36ecd122b58949f883ca603704f6694b",
         "value": "juan",
@@ -31,6 +18,19 @@
         "category": "general",
         "created_at": "2026-08-08T10:50:55.049627",
         "updated_at": "2026-08-08T10:50:55.049627",
+        "importance": 2,
+        "source": "user",
+        "times_used": 0,
+        "last_access": null,
+        "aliases": [],
+        "tags": []
+    },
+    "nombre": {
+        "id": "357f91ded2bb4f63914e944883f8e2fc",
+        "value": "juan",
+        "category": "personal",
+        "created_at": "2026-08-09T08:44:18.768706",
+        "updated_at": "2026-08-09T08:44:18.768706",
         "importance": 2,
         "source": "user",
         "times_used": 0,

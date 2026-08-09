@@ -60,7 +60,9 @@ class DocumentManager:
             "json": "json",
             "markdown": "md", "md": "md"
         }
-        return aliases.get(format_name)#, "docx"#)
+        # CAMBIO: si no está en aliases, devuelve el mismo valor
+        return aliases.get(format_name, format_name)
+
 
     # ==================================================
     # Router
@@ -108,17 +110,12 @@ class DocumentManager:
         # Validar contenido
         content = data.get("content", "")
         if not content.strip():
-            return ActionResult(
-                success=False,
-                status=ActionStatus.ERROR,
-                module="document",
-                command="create",
-                message="El contenido no puede estar vacío."
-            )
+            # CAMBIO: permitir documento vacío
+            content = ""
 
         # Validar formato
         format_name = self._normalize_format(data.get("format"))
-        if not format_name:  # si no se reconoce el formato
+        if not format_name:
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,
@@ -141,15 +138,12 @@ class DocumentManager:
         filename = f"{name}{extension}"
         filepath = os.path.join(self.path, filename)
 
-        # Validar duplicado
-        if os.path.exists(filepath):
-            return ActionResult(
-                success=False,
-                status=ActionStatus.ERROR,
-                module="document",
-                command="create",
-                message=f"El documento '{filename}' ya existe."
-            )
+        # Generar nombre alternativo si ya existe
+        counter = 1
+        while os.path.exists(filepath):
+            filename = f"{name}_{counter}{extension}"
+            filepath = os.path.join(self.path, filename)
+            counter += 1
 
         # Crear documento
         try:
@@ -172,51 +166,54 @@ class DocumentManager:
             )
 
 
-
-
-    # ==================================================
-    # Leer documento
-    # ==================================================
+        # ==================================================
+        # Leer documento
+        # ==================================================
     def read(self, data):
         name = data.get("topic")
         if not name:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", 
-                                "read", 
-                                "No especificaste el nombre del documento.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="read",
+                message="No especificaste el nombre del documento."
+            )
 
         filepath, extension = self._get_document(name)
         if filepath is None:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", 
-                                "read", 
-                                "No encontré ese documento.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="read",
+                message="No encontré ese documento."
+            )
 
         try:
             if extension in [".txt", ".md", ".json"]:
                 with open(filepath, "r", encoding="utf-8") as file:
                     content = file.read()
-
             elif extension == ".docx":
-
                 from docx import Document
                 doc = Document(filepath)
-
                 content = "\n".join(p.text for p in doc.paragraphs)
-
             elif extension == ".pdf":
-
-                return ActionResult(False, 
-                                    ActionStatus.WARNING, 
-                                    "document", "read", 
-                                    "La lectura de PDF llegará en una próxima versión.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="document",
+                    command="read",
+                    message="La lectura de PDF llegará en una próxima versión."
+                )
             else:
-                return ActionResult(False, 
-                                    ActionStatus.ERROR, 
-                                    "document", "read", 
-                                    "Formato no soportado.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="document",
+                    command="read",
+                    message="Formato no soportado."
+                )
 
             return ActionResult(
                 success=True,
@@ -227,10 +224,13 @@ class DocumentManager:
                 data={"content": content}
             )
         except Exception as e:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "read", 
-                                str(e))
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="read",
+                message=str(e)
+            )
 
     # ==================================================
     # Escribir documento
@@ -238,24 +238,28 @@ class DocumentManager:
     def write(self, data):
         name = data.get("topic")
         content = data.get("content", "")
+
         if not name:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "write", 
-                                "No especificaste el nombre del documento.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="write",
+                message="No especificaste el nombre del documento."
+            )
 
         filepath, extension = self._get_document(name)
         if filepath is None:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "write", 
-                                "No encontré ese documento.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="write",
+                message="No encontré ese documento."
+            )
 
         try:
             if extension in [".txt", ".md"]:
-                # Solo se antepone un salto de línea si el archivo ya
-                # tiene contenido, para no dejar una línea en blanco
-                # inicial.
                 prefix = "\n" if os.path.getsize(filepath) > 0 else ""
                 with open(filepath, "a", encoding="utf-8") as file:
                     file.write(prefix + content)
@@ -265,15 +269,21 @@ class DocumentManager:
                 doc.add_paragraph(content)
                 doc.save(filepath)
             elif extension == ".json":
-                return ActionResult(False, 
-                                    ActionStatus.WARNING, 
-                                    "document", "write", 
-                                    "Por seguridad todavía no puedo modificar archivos JSON.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="document",
+                    command="write",
+                    message="Por seguridad todavía no puedo modificar archivos JSON."
+                )
             elif extension == ".pdf":
-                return ActionResult(False, 
-                                    ActionStatus.WARNING, 
-                                    "document", "write", 
-                                    "La edición de PDF estará disponible en una próxima versión.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="document",
+                    command="write",
+                    message="La edición de PDF estará disponible en una próxima versión."
+                )
 
             return ActionResult(
                 success=True,
@@ -283,10 +293,13 @@ class DocumentManager:
                 message=f"Contenido agregado a '{os.path.basename(filepath)}'."
             )
         except Exception as e:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "write", 
-                                str(e))
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="write",
+                message=str(e)
+            )
 
     # ==================================================
     # Eliminar documento
@@ -295,10 +308,13 @@ class DocumentManager:
         name = data.get("topic")
         filepath, extension = self._get_document(name)
         if filepath is None:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "delete", 
-                                "No encontré ese documento.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="delete",
+                message="No encontré ese documento."
+            )
 
         try:
             os.remove(filepath)
@@ -310,45 +326,66 @@ class DocumentManager:
                 message=f"Documento '{os.path.basename(filepath)}' eliminado."
             )
         except Exception as e:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "delete", 
-                                str(e))
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="delete",
+                message=str(e)
+            )
 
     # ==================================================
     # Renombrar documento
     # ==================================================
     def rename(self, data):
-        old_name = data.get("old_name")
+
+        old_name = data.get("old_name") or data.get("topic")
         new_name = data.get("new_name")
+
         filepath, extension = self._get_document(old_name)
+
         if filepath is None:
             return ActionResult(
-             success=False,
+                success=False,
                 status=ActionStatus.ERROR,
                 module="document",
                 command="rename",
                 message="No encontré ese documento."
             )
 
-        new_path = os.path.join(self.path, f"{new_name}{extension}")
+        new_path = os.path.join(
+            self.path,
+            f"{new_name}{extension}"
+        )
+
+        # 🔧 CAMBIO: Generar nombre alternativo si ya existe
+        counter = 1
+        while os.path.exists(new_path):
+            new_path = os.path.join(
+                self.path,
+                f"{new_name}_{counter}{extension}"
+            )
+            counter += 1
+
         try:
             os.rename(filepath, new_path)
+
             return ActionResult(
-            success=True,
-            status=ActionStatus.SUCCESS,
-            module="document",
-            command="rename",
-            message=f"'{old_name}' fue renombrado a '{new_name}'."
-        )
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="document",
+                command="rename",
+                message=f"'{old_name}' fue renombrado a '{os.path.basename(new_path)}'."
+            )
+
         except Exception as e:
             return ActionResult(
-            success=False,
-            status=ActionStatus.ERROR,
-            module="document",
-            command="rename",
-            message=str(e)
-        )
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="rename",
+                message=str(e)
+            )
 
 
 
@@ -356,15 +393,21 @@ class DocumentManager:
     # Copiar documento
     # ==================================================
 
+    # ==================================================
+    # Copiar documento
+    # ==================================================
     def copy(self, data):
         old_name = data.get("old_name")
         new_name = data.get("new_name")
         filepath, extension = self._get_document(old_name)
         if filepath is None:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "copy", 
-                                "No encontré ese documento.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="copy",
+                message="No encontré ese documento."
+            )
 
         new_path = os.path.join(self.path, f"{new_name}{extension}")
         try:
@@ -377,10 +420,13 @@ class DocumentManager:
                 message=f"'{old_name}' copiado como '{new_name}'."
             )
         except Exception as e:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "copy", 
-                                str(e))
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="copy",
+                message=str(e)
+            )
 
     # ==================================================
     # Mover documento
@@ -390,12 +436,14 @@ class DocumentManager:
         new_path = data.get("new_path")
         filepath, extension = self._get_document(name)
 
-        
         if filepath is None:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "move", 
-                                "No encontré ese documento.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="move",
+                message="No encontré ese documento."
+            )
 
         try:
             shutil.move(filepath, new_path)
@@ -407,11 +455,13 @@ class DocumentManager:
                 message="Documento movido correctamente."
             )
         except Exception as e:
-            return ActionResult(False, 
-                                ActionStatus.ERROR, 
-                                "document", "move", 
-                                str(e))
-
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="move",
+                message=str(e)
+            )
     # ==================================================
     # Listar documentos
     # ==================================================    
@@ -558,21 +608,16 @@ class DocumentManager:
     # Buscar documento físicamente
     # ==================================================
     def find_document(self, name):
-
         if not name:
             return None, None
-
         if not os.path.exists(self.path):
             return None, None
 
         for file in os.listdir(self.path):
-
             filename, extension = os.path.splitext(file)
-
-            if filename.lower() == name.lower():
-
+            # Comparar tanto con nombre sin extensión como con nombre completo
+            if filename.lower() == name.lower() or file.lower() == name.lower():
                 return os.path.join(self.path, file), extension
-
         return None, None
 
     # ==================================================
