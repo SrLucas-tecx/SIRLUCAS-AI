@@ -23,14 +23,20 @@ class JSONManager:
 
         except FileNotFoundError:
 
-            logger.info("No existe el archivo '%s'. Se creará uno nuevo.", path)
+            logger.info(
+                "No existe el archivo '%s'. Se creará uno nuevo.",
+                path
+            )
             return {}
 
         except json.JSONDecodeError as e:
 
             logger.error(
                 "Error en el JSON '%s' (línea %s, columna %s): %s",
-                path, e.lineno, e.colno, e.msg,
+                path,
+                e.lineno,
+                e.colno,
+                e.msg,
             )
 
             return None
@@ -38,9 +44,9 @@ class JSONManager:
     @staticmethod
     def save(path, data):
 
-        # Escritura atómica: se vuelca a un temporal y se reemplaza el
-        # destino de una sola vez, para que una interrupción no deje el
-        # archivo original a medio escribir.
+        # Escritura atómica:
+        # primero se escribe completamente un archivo temporal
+        # y después se reemplaza el archivo original.
         tmp_path = f"{path}.tmp"
 
         try:
@@ -63,7 +69,11 @@ class JSONManager:
 
         except Exception as e:
 
-            logger.error("Error al guardar '%s': %s", path, e)
+            logger.error(
+                "Error al guardar '%s': %s",
+                path,
+                e
+            )
 
             try:
                 os.remove(tmp_path)

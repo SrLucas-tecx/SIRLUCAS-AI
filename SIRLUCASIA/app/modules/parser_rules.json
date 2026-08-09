@@ -212,18 +212,24 @@
     "topic_group": 1
   },
   {
-    "name": "cerrar_app",
-    "module": "system",
-    "priority": 10,
-    "regex": [
-      "^cierra (.+)$",
-      "^cerrar (.+)$",
-      "^termina (.+)$",
-      "^finaliza (.+)$"
-    ],
-    "command": "close",
-    "topic_group": 1
-  },
+  "name": "cerrar_referencia",
+  "module": "system",
+  "priority": 2,
+  "regex": [
+    "^cierralo$",
+    "^ciérralo$",
+    "^cierrala$",
+    "^ciérrala$",
+    "^cerrarlo$",
+    "^cerrarla$",
+    "^terminalo$",
+    "^termínalo$",
+    "^terminala$",
+    "^termínala$"
+  ],
+  "command": "close",
+  "topic": "lo"
+},
   {
     "name": "reiniciar_app",
     "module": "system",
@@ -424,18 +430,32 @@
     "topic_group": 2
   },
   {
-    "name": "crear_documento_con_contenido",
-    "module": "document",
-    "priority": 15,
-    "regex": [
-      "^crea un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
-      "^crear un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$"
-    ],
-    "command": "create",
-    "format_group": 1,
-    "topic_group": 2,
-    "content_group": 3
-  },
+  "name": "crear_documento_con_contenido_llamado",
+  "module": "document",
+  "priority": 15,
+  "regex": [
+    "^crea un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$",
+    "^crear un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$"
+  ],
+  "command": "create",
+  "topic_group": 1,
+  "content_group": 2,
+  "format": "docx"
+},
+{
+  "name": "crear_documento_con_contenido",
+  "module": "document",
+  "priority": 15,
+  "regex": [
+    "^crea un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
+    "^crear un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$"
+  ],
+  "command": "create",
+  "format_group": 1,
+  "topic_group": 2,
+  "content_group": 3
+}
+,
   {
     "name": "listar_documentos_por_formato",
     "module": "document",
@@ -448,5 +468,182 @@
     ],
     "command": "list_by_format",
     "format_group": 1
-  }
+  },
+  {
+    "name": "calculo_directo",
+    "module": "calculator",
+    "priority": 5,
+    "regex": [
+        "^([0-9]+(?:\\.[0-9]+)?(?:\\s*[+\\-*/%^]\\s*[0-9]+(?:\\.[0-9]+)?)+)$"
+    ],
+    "command": "calculate",
+    "topic_group": 0
+},
+{
+  "name": "olvidar_memoria",
+  "module": "memory",
+  "priority": 2,
+  "regex": [
+    "^olvida (.+)$",
+    "^borra (.+)$",
+    "^elimina (.+)$"
+  ],
+  "command": "forget",
+  "key_group": 1
+},
+{
+  "name": "actualizar_memoria_directa",
+  "module": "memory",
+  "priority": 2,
+  "regex": [
+    "^actualiza (.+) a (.+)$",
+    "^cambia (.+) a (.+)$"
+  ],
+  "command": "update",
+  "key_group": 1,
+  "value_group": 2
+},
+{
+  "name": "listar_memorias_por_categoria",
+  "module": "memory",
+  "priority": 5,
+  "regex": [
+    "^lista memorias de categoria (.+)$",
+    "^listar memorias de categoria (.+)$",
+    "^muestrame mis memorias de categoria (.+)$",
+    "^que memorias de categoria (.+) tengo$"
+  ],
+  "command": "list_by_category",
+  "category_group": 1
+},
+{
+  "name": "buscar_memoria_por_categoria",
+  "module": "memory",
+  "priority": 5,
+  "regex": [
+    "^busca memorias de categoria (.+)$",
+    "^buscar memorias de categoria (.+)$",
+    "^encuentra memorias de categoria (.+)$"
+  ],
+  "command": "search_by_category",
+  "category_group": 1
+},
+{
+  "name": "resumen_memoria",
+  "module": "memory",
+  "priority": 5,
+  "regex": [
+    "^que recuerdas$",
+    "^qué recuerdas$",
+    "^resumen de memoria$"
+  ],
+  "command": "summary"
+},{
+  "name": "actualizar_memoria_contextual",
+  "module": "memory",
+  "priority": 2,
+  "regex": [
+    "^mi (.+) ahora es (.+)$",
+    "^ahora mi (.+) es (.+)$"
+  ],
+  "command": "update",
+  "key_group": 1,
+  "value_group": 2
+},
+{
+  "name": "reiniciar_referencia",
+  "module": "system",
+  "priority": 2,
+  "regex": [
+    "^reinicialo$",
+    "^reinícialo$",
+    "^reiníciala$",
+    "^reiniciala$"
+  ],
+  "command": "restart",
+  "topic": "lo"
+},
+{
+  "name": "cerrar_generico",
+  "module": "system",
+  "priority": 2,
+  "regex": [
+    "^cierra$",
+    "^cerrar$"
+  ],
+  "command": "close",
+  "topic": "lo"
+},
+{
+  "name": "leer_referencia",
+  "module": "document",
+  "priority": 2,
+  "regex": [
+    "^leelo$",
+    "^léelo$",
+    "^leela$",
+    "^léela$"
+  ],
+  "command": "read",
+  "topic": "lo"
+},
+{
+  "name": "escribir_referencia",
+  "module": "document",
+  "priority": 2,
+  "regex": [
+    "^escribelo (.+)$",
+    "^escríbelo (.+)$",
+    "^escribela (.+)$",
+    "^escríbela (.+)$"
+  ],
+  "command": "write",
+  "topic": "lo",
+  "content_group": 1
+},
+{
+  "name": "cerrar_documento_referencia",
+  "module": "document",
+  "priority": 2,
+  "regex": [
+    "^cierralo$",
+    "^ciérralo$",
+    "^cierrala$",
+    "^ciérrala$"
+  ],
+  "command": "delete",
+  "topic": "lo"
+},
+{
+  "name": "renombrar_documento_referencia",
+  "module": "document",
+  "priority": 2,
+  "regex": [
+    "^renombralo a (.+)$",
+    "^renómbralo a (.+)$",
+    "^renombrala a (.+)$",
+    "^renómbrala a (.+)$"
+  ],
+  "command": "rename",
+  "topic": "lo",
+  "new_name_group": 1
+}
+,
+{
+  "name": "eliminar_documento_referencia",
+  "module": "document",
+  "priority": 2,
+  "regex": [
+    "^elimínalo$",
+    "^eliminalo$",
+    "^bórralo$",
+    "^borralo$",
+    "^elimínala$",
+    "^eliminala$",
+    "^bórrala$",
+    "^borrrala$"
+  ],
+  "command": "delete",
+  "topic": "lo"
+}
 ]

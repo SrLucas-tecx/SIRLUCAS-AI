@@ -615,24 +615,31 @@ class MemoryManager:
         return round(score, 3)
 
     def rank_memories(self, data: dict) -> ActionResult:
-        """Ordena todas las memorias por relevancia respecto a un texto dado."""
-        text = data.get("text", "") if isinstance(data, dict) else str(data or "")
-        limit = data.get("limit", DEFAULT_FIND_LIMIT) if isinstance(data, dict) else DEFAULT_FIND_LIMIT
+            """Ordena todas las memorias por relevancia respecto a un texto dado."""
+            text = data.get("text", "") if isinstance(data, dict) else str(data or "")
+            limit = data.get("limit", DEFAULT_FIND_LIMIT) if isinstance(data, dict) else DEFAULT_FIND_LIMIT
 
-        if not text:
-            return ActionResult(True, ActionStatus.SUCCESS, "memory", "rank_memories", "Memorias ordenadas por relevancia.", [])
+            if not text:
+                return ActionResult(True, ActionStatus.SUCCESS, "memory", "rank_memories", "Memorias ordenadas por relevancia.", [])
 
-        # Se filtran los scores nulos ANTES de ordenar: evita ordenar
-        # entradas irrelevantes que de todas formas se descartarían después.
-        scored = (
-            (key, self.score_relevance(key, text), record)
-            for key, record in self.memory.items()
-        )
-        relevant = [item for item in scored if item[1] > 0]
-        relevant.sort(key=lambda item: item[1], reverse=True)
-        ranked = [{"key": k, "score": s, "record": r} for k, s, r in relevant[:limit]]
+            scored = (
+                (key, self.score_relevance(key, text), record)
+                for key, record in self.memory.items()
+            )
+            relevant = [item for item in scored if item[1] > 0]
+            relevant.sort(key=lambda item: item[1], reverse=True)
 
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "rank_memories", "Memorias ordenadas por relevancia.", ranked)
+            # Limitar resultados y devolver
+            top = relevant[:limit]
+            return ActionResult(
+                True,
+                ActionStatus.SUCCESS,
+                "memory",
+                "rank_memories",
+                f"Memorias ordenadas por relevancia respecto a '{text}'.",
+                top,
+            )
+
 
     def suggest_memories(self, text: str = "", context: dict | None = None) -> ActionResult:
         """

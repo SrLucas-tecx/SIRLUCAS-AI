@@ -1,10 +1,10 @@
 {
     "nombre": {
         "id": "a30b8dd6c29d4bcaa94d15757a1d05f6",
-        "value": "juan",
+        "value": "sirlucas",
         "category": "personal",
         "created_at": "2026-08-05T11:22:32.634797",
-        "updated_at": "2026-08-05T11:22:44.809532",
+        "updated_at": "2026-08-08T11:24:52.534962",
         "importance": 2,
         "source": "user",
         "times_used": 0,
@@ -18,6 +18,19 @@
         "category": "general",
         "created_at": "2026-08-05T11:22:32.634797",
         "updated_at": "2026-08-05T11:22:32.634797",
+        "importance": 2,
+        "source": "user",
+        "times_used": 0,
+        "last_access": null,
+        "aliases": [],
+        "tags": []
+    },
+    "ciudad": {
+        "id": "cb3fd61ef6bf48568bad90aca9ed43c0",
+        "value": "toluca",
+        "category": "general",
+        "created_at": "2026-08-08T10:50:55.049627",
+        "updated_at": "2026-08-08T10:50:55.049627",
         "importance": 2,
         "source": "user",
         "times_used": 0,

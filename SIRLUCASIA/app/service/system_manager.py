@@ -298,38 +298,39 @@ class SystemManager:
         Se usa solo cuando no hay procesos rastreados por el asistente
         para esa aplicación.
         """
-        try:
-            result = subprocess.run(
-                ["taskkill", "/IM", program, "/F"],
-                capture_output=True,
-                text=True,
-                timeout=SUBPROCESS_TIMEOUT_SECONDS,
-            )
-        except subprocess.TimeoutExpired:
-            logger.warning("taskkill no respondió a tiempo cerrando '%s' (%s).", app, program)
-            return self._error("close", f"No pude cerrar {app}.", error="taskkill no respondió a tiempo.")
-        except Exception as e:
-            logger.exception("Error inesperado ejecutando taskkill para '%s' (%s).", app, program)
-            return self._error("close", f"No pude cerrar {app}.", error=str(e))
+        # Lista de candidatos: el nombre original y variantes conocidas
+        candidates = [program]
 
-        if result.returncode == 0:
-            return self._success("close", f"{app} cerrado correctamente.")
+        # Caso especial: calculadora moderna de Windows
+        if program.lower() == "calc.exe":
+            candidates.append("Calculator.exe")
+            candidates.append("ApplicationFrameHost.exe")
 
-        stderr = (result.stderr or "").strip()
-        stderr_lower = stderr.lower()
+        last_error = None
 
-        if "not found" in stderr_lower or "no se encontr" in stderr_lower:
-            logger.warning("'%s' (%s) no estaba abierto.", app, program)
-            return self._error("close", f"{app} no está abierto.", error=stderr)
+        for candidate in candidates:
+            try:
+                result = subprocess.run(
+                    ["taskkill", "/IM", candidate, "/F"],
+                    capture_output=True,
+                    text=True,
+                    timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                )
+                if result.returncode == 0:
+                    return self._success("close", f"{app} cerrado correctamente.")
+                else:
+                    last_error = (result.stderr or "").strip()
+                    logger.warning("taskkill no pudo cerrar '%s' (%s): %s", app, candidate, last_error)
+            except subprocess.TimeoutExpired:
+                logger.warning("taskkill no respondió a tiempo cerrando '%s' (%s).", app, candidate)
+                last_error = "taskkill timeout"
+            except Exception as e:
+                logger.exception("Error inesperado ejecutando taskkill para '%s' (%s).", app, candidate)
+                last_error = str(e)
 
-        if "denied" in stderr_lower or "denegado" in stderr_lower:
-            logger.warning("Permiso denegado cerrando '%s' (%s).", app, program)
-            return self._error(
-                "close", f"No tengo permisos para cerrar {app}.", error=stderr
-            )
+        # Si ninguno de los candidatos funcionó
+        return self._error("close", f"No pude cerrar {app}.", error=last_error or "Ningún candidato respondió")
 
-        logger.warning("taskkill no pudo cerrar '%s' (%s): %s", app, program, stderr)
-        return self._error("close", f"No pude cerrar {app}.", error=stderr)
 
     # ==================================================
     # Reiniciar aplicación
@@ -367,27 +368,31 @@ class SystemManager:
         if program is None:
             return False
 
-        # Atajo: si ya tenemos un proceso rastreado y vivo para este
-        # ejecutable, no hace falta ni siquiera consultar tasklist.
+        # Atajo: si ya tenemos un proceso rastreado y vivo para este ejecutable
         if self._registry.alive_for(program):
             return True
 
+        # Lista de candidatos para verificación
+        candidates = [program]
+        if program.lower() == "calc.exe":
+            candidates.append("Calculator.exe")
+            candidates.append("ApplicationFrameHost.exe")
+
         try:
-            result = subprocess.run(
-                ["tasklist", "/FI", f"IMAGENAME eq {program}"],
-                capture_output=True,
-                text=True,
-                timeout=SUBPROCESS_TIMEOUT_SECONDS,
-            )
-            return program.lower() in result.stdout.lower()
+            for candidate in candidates:
+                result = subprocess.run(
+                    ["tasklist", "/FI", f"IMAGENAME eq {candidate}"],
+                    capture_output=True,
+                    text=True,
+                    timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                )
+                if candidate.lower() in result.stdout.lower():
+                    return True
+            return False
         except subprocess.TimeoutExpired:
             logger.warning("tasklist no respondió a tiempo consultando '%s'.", program)
             return False
         except Exception:
-            # A diferencia de "el proceso no existe" (esperable), que
-            # tasklist no pueda ejecutarse en absoluto (comando no
-            # encontrado, permisos, etc.) es un fallo inesperado del
-            # entorno, no un resultado normal del dominio.
             logger.exception("No se pudo consultar tasklist para '%s'.", program)
             return False
 
