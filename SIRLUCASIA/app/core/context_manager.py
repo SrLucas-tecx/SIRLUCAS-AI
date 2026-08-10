@@ -2,6 +2,8 @@ import re
 from collections import deque
 from datetime import datetime
 
+from SIRLUCASIA.app.core.action_result import ActionResult
+from SIRLUCASIA.app.core.action_status import ActionStatus
 from app.core.context_stack import ContextStack
 
 # ==================================================
@@ -148,6 +150,14 @@ class ContextManager:
         self._last_touched = None
 
         self.stack.clear()
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="context",
+            command="clear",
+            message="Contexto limpiado."
+        )
+    
 
     # ==========================================
     # Reinicio PARCIAL (suave)
@@ -164,6 +174,14 @@ class ContextManager:
         self.current_answer = None
         self.pending_actions = []
         self.working_memory = {}
+
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="context",
+            command="reset",
+            message="Contexto reiniciado."
+        )   
 
     # ==========================================
     # Actualizar contexto con el resultado de un turno
@@ -277,6 +295,14 @@ class ContextManager:
         self.timestamps["last_update"] = now
 
         self._log_debug()
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="context",
+            command="update",
+            message="Contexto actualizado.",
+            data={"turn_number": self.turn_number}
+        )
 
     # ==========================================
     # Respuesta del asistente del turno actual
@@ -294,6 +320,15 @@ class ContextManager:
 
         if self.history:
             self.history[-1]["respuesta"] = answer
+
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="context",
+            command="set_answer",
+            message="Respuesta registrada.",
+            data={"turn_number": self.turn_number}
+        )
 
     # ==========================================
     # Getters simples
@@ -679,7 +714,7 @@ class ContextManager:
     # Estadísticas
     # ==========================================
     def statistics(self):
-        return {
+        status = {
             "turn_number": self.turn_number,
             "current_topic": self.current_topic,
             "current_module": self.current_module,
@@ -697,6 +732,14 @@ class ContextManager:
             "pending_actions": len(self.pending_actions),
             "stack": self.stack.statistics(),
         }
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="context",
+            command="statistics",
+            message="Estadísticas del contexto.",
+            data=status
+        )
 
     # ==========================================
     # Serialización (para JSONManager / HistoryManager
@@ -741,7 +784,13 @@ class ContextManager:
     def from_dict(self, data: dict):
         """Reconstruye el contexto completo a partir de to_dict()."""
         if not data:
-            return self
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="context",
+                command="from_dict",
+                message="Datos inválidos para reconstruir el contexto."
+            )
 
         self.turn_number = data.get("turn_number", 0)
         self.current_topic = data.get("current_topic")
@@ -778,14 +827,19 @@ class ContextManager:
         self.stack.from_dict(data.get("stack", {}))
         self.sync()
 
-        return self
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="context",
+            command="from_dict",
+            message="Contexto reconstruido desde diccionario."
+        )
 
     def sync(self):
         """
         Realinea los punteros "current_*" con el tope real de cada
         pila del ContextStack. Útil después de from_dict(), o si
-        algún componente externo (Router, ActionPlanner) manipuló
-        el ContextStack directamente sin pasar por este manager.
+        algún componente externo manipuló el ContextStack directamente.
         """
         self.current_program = self.stack.peek_program()
         self.current_document = self.stack.peek_document()
@@ -797,6 +851,16 @@ class ContextManager:
         self.current_url = self.stack.peek_url()
         self.current_task = self.stack.peek_task()
 
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="context",
+            command="sync",
+            message="Contexto sincronizado.",
+            data=self.to_dict()
+        )
+
+
     # ==========================================
     # Utilidades auxiliares (no exigidas por la
     # especificación, pero coherentes con ella)
@@ -804,13 +868,27 @@ class ContextManager:
     def add_pending_action(self, action):
         """Encola una acción planificada (ActionPlanner) pendiente de ejecutar."""
         self.pending_actions.append(action)
-        return action
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="context",
+            command="add_pending_action",
+            message="Acción pendiente agregada.",
+            data={"action": action}
+        )
 
     def pop_pending_action(self):
         """Saca y devuelve la siguiente acción pendiente (FIFO)."""
         if not self.pending_actions:
             return None
-        return self.pending_actions.pop(0)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="context",
+            command="pop_pending_action",
+            message="Acción pendiente sacada.",
+            data={"action": self.pending_actions.pop(0)}
+        )
 
     def set_working(self, key, value):
         """Guarda un dato efímero de trabajo (distinto de las variables de usuario)."""

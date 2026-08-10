@@ -1,3 +1,7 @@
+import logging
+from app.core.action_result import ActionResult
+from app.core.action_status import ActionStatus
+
 class CommandManager:
 
     def __init__(self, memory_manager):
@@ -38,135 +42,146 @@ class CommandManager:
         }
 
     def execute(self, data):
+        command = data.get("command") if isinstance(data, dict) else None
+        handler = self.commands.get(command)
 
-        print(f"Ejecutando comando: {data}")
+        if handler:
+            return handler(data)
 
-        # ==========================
-        # NUEVO SISTEMA (dict)
-        # ==========================
-        if isinstance(data, dict):
-
-            command = data.get("command")
-
-            handler = self.commands.get(command)
-
-            if handler:
-                return handler(data)
-
-            return None
-
-        # ==========================
-        # SISTEMA ANTIGUO (string)
-        # ==========================
-        if isinstance(data, str):
-
-            parts = data.split()
-
-            if len(parts) == 0:
-                return None
-
-            command = parts[0].lower()
-
-            handler = self.commands.get(command)
-
-            if handler:
-                return handler(parts)
-
-            return None
-
-        return None
+        return ActionResult(
+            success=False,
+            status=ActionStatus.ERROR,
+            module="command",
+            command=command,
+            message=f"No existe el comando '{command}'.",
+            error="Comando desconocido en CommandManager."
+        )
 
     def remember(self, data):
-
         if isinstance(data, dict):
-
-            key = data["key"]
-            value = data["value"]
-
+            key = data.get("key")
+            value = data.get("value")
         else:
-
             if len(data) < 3:
-                return "Uso: remember <clave> <valor>"
-
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="command",
+                    command="remember",
+                    message="Uso: remember <clave> <valor>",
+                    error="Argumentos insuficientes."
+                )
             key = data[1]
             value = " ".join(data[2:])
 
-        print(f"Guardando: {key} = {value}")
-
         self.memory.remember({"key": key, "value": value})
 
-        return f"Lo recordaré. ({key} = {value})"
-
-    def recall(self, data):
-
-        if isinstance(data, dict):
-
-            key = data["key"]
-
-        else:
-
-            if len(data) < 2:
-                return "Uso: recall <clave>"
-
-            key = data[1]
-
-        value = self.memory.recall(key)
-
-        if value is None:
-            return f"No recuerdo '{key}'."
-
-        return f"{key} = {value}"
-
-    def forget(self, data):
-
-        if isinstance(data, dict):
-
-            key = data["key"]
-
-        else:
-
-            if len(data) < 2:
-                return "Uso: forget <clave>"
-
-            key = data[1]
-
-        if self.memory.forget(key):
-            return f"He olvidado '{key}'."
-
-        return f"No encontré '{key}' en mi memoria."
-
-    def list_memories(self, data=None):
-
-        memories = self.memory.list_memories()
-
-        if not memories:
-            return "No tengo memorias guardadas."
-
-        response = "Memorias guardadas:\n"
-
-        for key, value in memories.items():
-            response += f"\n- {key}: {value}"
-
-        return response
-
-    def help(self, data=None):
-
-        response = (
-            "\n"
-            "==============================\n"
-            "       SIRLUCAS AI\n"
-            "     Lista de comandos\n"
-            "==============================\n\n"
-            "remember <clave> <valor>\n"
-            "    Guarda un dato en memoria.\n\n"
-            "recall <clave>\n"
-            "    Recupera un dato guardado.\n\n"
-            "forget <clave>\n"
-            "    Elimina un dato de memoria.\n\n"
-            "list\n"
-            "    Muestra todas las memorias.\n\n"
-            "help\n"
-            "    Muestra esta ayuda."
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="command",
+            command="remember",
+            message=f"Lo recordaré. ({key} = {value})",
+            data={"key": key, "value": value}
         )
 
-        return response
+    def recall(self, data):
+        if isinstance(data, dict):
+            key = data.get("key")
+        else:
+            if len(data) < 2:
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="command",
+                    command="recall",
+                    message="Uso: recall <clave>",
+                    error="Argumentos insuficientes."
+                )
+            key = data[1]
+
+        value = self.memory.recall({"key": key})
+
+        if not value.success:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="command",
+                command="recall",
+                message=f"No recuerdo '{key}'."
+            )
+
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="command",
+            command="recall",
+            message=f"{key} = {value.message}",
+            data={"key": key, "value": value.message}
+        )
+
+    def forget(self, data):
+        if isinstance(data, dict):
+            key = data.get("key")
+        else:
+            if len(data) < 2:
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="command",
+                    command="forget",
+                    message="Uso: forget <clave>",
+                    error="Argumentos insuficientes."
+                )
+            key = data[1]
+
+        result = self.memory.forget({"key": key})
+
+        if not result.success:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="command",
+                command="forget",
+                message=f"No encontré '{key}' en mi memoria."
+            )
+
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="command",
+            command="forget",
+            message=f"He olvidado '{key}'.",
+            data={"key": key}
+        )
+
+    def list_memories(self, data=None):
+        memories = self.memory.list_memories()
+
+        if not memories.success or not memories.data:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="command",
+                command="list",
+                message="No tengo memorias guardadas."
+            )
+
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="command",
+            command="list",
+            message="Memorias guardadas.",
+            data=memories.data
+        )
+
+    def help(self, data=None):
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="command",
+            command="help",
+            message="Lista de comandos disponible.",
+            data=self.command_info
+        )

@@ -147,11 +147,25 @@ class MemoryManager:
         command = data.get("command") if isinstance(data, dict) else None
 
         if not command:
-            return ActionResult(False, ActionStatus.ERROR, "memory", command, "No se especificó un comando.")
+            return ActionResult(
+                success=False, 
+                status=ActionStatus.ERROR, 
+                module="memory", 
+                command=command, 
+                message="No se especificó un comando."
+            )
 
         method = getattr(self, command, None)
         if method is None or not callable(method) or command.startswith("_"):
-            return ActionResult(False, ActionStatus.ERROR, "memory", command, f"No existe el comando '{command}'.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command=command,
+                message=f"No existe el comando '{command}'."
+
+
+            )
 
         try:
             result = method(data)
@@ -159,16 +173,35 @@ class MemoryManager:
             try:
                 result = method()
             except Exception as exc:
-                return ActionResult(False, ActionStatus.ERROR, "memory", command, f"Error ejecutando '{command}': {exc}")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="memory",
+                    command=command,
+                    message=f"Error ejecutando '{command}': {exc}"
+                )
         except Exception as exc:
-            return ActionResult(False, ActionStatus.ERROR, "memory", command, f"Error ejecutando '{command}': {exc}")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command=command,
+                message=f"Error ejecutando '{command}': {exc}"
+                )
 
         if isinstance(result, ActionResult):
             return result
 
         # Compatibilidad: si un método devuelve un valor "crudo", se
         # envuelve automáticamente para mantener un contrato uniforme.
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", command, "OK", result)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command=command,
+            message="OK",
+            data=result
+        )
 
     # ==================================================
     # 4. CRUD DE MEMORIA
@@ -181,7 +214,13 @@ class MemoryManager:
         importance = self._clamp_importance(data.get("importance", DEFAULT_IMPORTANCE))
 
         if not self._validate_key_value(key, value):
-            return ActionResult(False, ActionStatus.ERROR, "memory", "remember", "Clave o valor inválido.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="remember",
+                message="Clave o valor inválido."
+            )
 
         record = self._create_record(
             value,
@@ -205,7 +244,15 @@ class MemoryManager:
             self.mark_dirty()
             self.save(force=True)
 
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "remember", f"Recordaré que tu {key} es {value}.", record)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="remember",
+            message=f"Recordaré que tu {key} es {value}.",
+            data=record
+
+        )
 
     def update(self, data: dict) -> ActionResult:
         """Actualiza el valor (y opcionalmente categoría/importancia) de una memoria existente."""
@@ -213,11 +260,23 @@ class MemoryManager:
         value = data.get("value")
 
         if not self._validate_key_value(key, value):
-            return ActionResult(False, ActionStatus.ERROR, "memory", "update", "Clave o valor inválido.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="update",
+                message="Clave o valor inválido."
+            )
 
         with self._lock:
             if key not in self.memory:
-                return ActionResult(False, ActionStatus.WARNING, "memory", "update", f"No existe '{key}' en memoria.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="memory",
+                    command="update",
+                    message=f"No existe '{key}' en memoria."
+                )
 
             record = self.memory[key]
             # Se retira del índice con el estado "viejo" y se vuelve a
@@ -237,7 +296,14 @@ class MemoryManager:
             self.mark_dirty()
             self.save(force=True)
 
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "update", f"He actualizado tu {key} a {value}.", record)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="update",
+            message=f"He actualizado tu {key} a {value}.",
+            data=record
+        )
 
     def forget(self, data: dict) -> ActionResult:
         """Elimina una memoria por clave."""
@@ -245,18 +311,36 @@ class MemoryManager:
 
         valid_key, _ = self._validate_key(key)
         if not valid_key:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "forget", "No especificaste la memoria a eliminar.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="forget",
+                message="No especificaste la memoria a eliminar."
+            )
 
         with self._lock:
             if key not in self.memory:
-                return ActionResult(False, ActionStatus.WARNING, "memory", "forget", f"No existe '{key}' en memoria.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="memory",
+                    command="forget",
+                    message=f"No existe '{key}' en memoria."
+                )
 
             record = self.memory.pop(key)
             self._index_remove(key, record)
             self.mark_dirty()
             self.save(force=True)
 
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "forget", f"He olvidado '{key}'.")
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="forget",
+            message=f"He olvidado '{key}'."
+            )
 
     def remove(self, data: dict) -> ActionResult:
         """Alias histórico de `forget()`."""
@@ -298,7 +382,14 @@ class MemoryManager:
             self._tag_index.clear()
             self.mark_dirty()
             self.save(force=True)
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "clear", f"Se eliminaron {removed} memorias.", {"removed": removed})
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="clear",
+            message=f"Se eliminaron {removed} memorias.",
+            data={"removed": removed}
+        )
 
     def clear_category(self, data: dict) -> ActionResult:
         """Elimina todas las memorias de una categoría."""
@@ -322,7 +413,14 @@ class MemoryManager:
             if keys
             else f"No había memorias en la categoría '{category}'."
         )
-        return ActionResult(bool(keys), status, "memory", "clear_category", message, {"removed": keys})
+        return ActionResult(
+            success=bool(keys),
+            status=status,
+            module="memory",
+            command="clear_category",
+            message=message,
+            data={"removed": keys}
+        )
 
     def rename(self, data: dict) -> ActionResult:
         """Renombra la clave de una memoria existente."""
@@ -331,17 +429,41 @@ class MemoryManager:
 
         valid_old, error_old = self._validate_key(old_key)
         if not valid_old:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "rename", "No especificaste la memoria a renombrar.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="rename",
+                message="No especificaste la memoria a renombrar."
+            )
 
         valid_new, error_new = self._validate_key(new_key)
         if not valid_new:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "rename", "No especificaste el nuevo nombre.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="rename",
+                message="No especificaste el nuevo nombre."
+            )
 
         with self._lock:
             if old_key not in self.memory:
-                return ActionResult(False, ActionStatus.WARNING, "memory", "rename", f"No existe '{old_key}' en memoria.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="memory",
+                    command="rename",
+                    message=f"No existe '{old_key}' en memoria."
+                )
             if new_key in self.memory:
-                return ActionResult(False, ActionStatus.ERROR, "memory", "rename", f"Ya existe una memoria llamada '{new_key}'.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="memory",
+                    command="rename",
+                    message=f"Ya existe una memoria llamada '{new_key}'."
+                )
 
             record = self.memory.pop(old_key)
             self._index_remove(old_key, record)
@@ -353,7 +475,14 @@ class MemoryManager:
             self.mark_dirty()
             self.save(force=True)
 
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "rename", f"'{old_key}' ahora se llama '{new_key}'.", record)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="rename",
+            message=f"'{old_key}' ahora se llama '{new_key}'.",
+            data=record
+        )
 
     def duplicate(self, data: dict) -> ActionResult:
         """Crea una copia independiente de una memoria bajo una nueva clave."""
@@ -362,13 +491,31 @@ class MemoryManager:
 
         with self._lock:
             if source_key not in self.memory:
-                return ActionResult(False, ActionStatus.WARNING, "memory", "duplicate", f"No existe '{source_key}' en memoria.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="memory",
+                    command="duplicate",
+                    message=f"No existe '{source_key}' en memoria."
+                )
 
             valid_target, _ = self._validate_key(target_key)
             if not valid_target:
-                return ActionResult(False, ActionStatus.ERROR, "memory", "duplicate", "No especificaste el nombre de la copia.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="memory",
+                    command="duplicate",
+                    message="No especificaste el nombre de la copia."
+                )
             if target_key in self.memory:
-                return ActionResult(False, ActionStatus.ERROR, "memory", "duplicate", f"Ya existe una memoria llamada '{target_key}'.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="memory",
+                    command="duplicate",
+                    message=f"Ya existe una memoria llamada '{target_key}'."
+                )
 
             record = json.loads(json.dumps(self.memory[source_key], default=str))
             record["id"] = self._generate_id()
@@ -382,7 +529,14 @@ class MemoryManager:
             self.mark_dirty()
             self.save(force=True)
 
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "duplicate", f"'{source_key}' duplicado como '{target_key}'.", record)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="duplicate",
+            message=f"'{source_key}' duplicado como '{target_key}'.",
+            data=record
+        )
 
     def merge(self, data: dict) -> ActionResult:
         """Combina varias memorias existentes en una sola nueva memoria."""
@@ -391,12 +545,24 @@ class MemoryManager:
 
         valid_target, _ = self._validate_key(target_key)
         if not valid_target:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "merge", "No especificaste el nombre de la memoria combinada.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="merge",
+                message="No especificaste el nombre de la memoria combinada."
+            )
 
         with self._lock:
             existing = [self._normalize(k) for k in keys if self._normalize(k) in self.memory]
             if not existing:
-                return ActionResult(False, ActionStatus.WARNING, "memory", "merge", "Ninguna de las memorias indicadas existe.")
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="memory",
+                    command="merge",
+                    message="Ninguna de las memorias indicadas existe."
+                )
 
             combined_value = "; ".join(str(self.memory[k]["value"]) for k in existing)
             category = data.get("category") or self.memory[existing[0]].get("category")
@@ -428,8 +594,12 @@ class MemoryManager:
             self.save(force=True)
 
         return ActionResult(
-            True, ActionStatus.SUCCESS, "memory", "merge",
-            f"Se combinaron {len(existing)} memorias en '{target_key}'.", record,
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="merge",
+            message=f"Se combinaron {len(existing)} memorias en '{target_key}'.",
+            data=record
         )
 
     # ==================================================
@@ -441,23 +611,48 @@ class MemoryManager:
 
         valid_key, _ = self._validate_key(key)
         if not valid_key:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "recall", "No especificaste qué recordar.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="recall",
+                message="No especificaste qué recordar."
+            )
 
         record = self.memory.get(key)
         if record is None:
-            return ActionResult(False, ActionStatus.WARNING, "memory", "recall", f"No recuerdo tu {key}.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="memory",
+                command="recall",
+                message=f"No recuerdo tu {key}."
+            )
 
         # Bookkeeping: NO escribe a disco en cada lectura, solo marca "dirty".
         self._increment_usage(key)
         self._touch(key)
 
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "recall", record["value"], record)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="recall",
+            message=record["value"],
+            data=record
+        )
 
     def search(self, data: dict | None = None) -> ActionResult:
         """Búsqueda de texto libre sobre valores y claves (comportamiento original preservado y extendido)."""
         query = (data.get("query", "") if data else "").strip().lower()
         if not query:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "search", "No especificaste qué buscar.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="search",
+                message="No especificaste qué buscar."
+            )
 
         results = {
             key: record
@@ -467,7 +662,14 @@ class MemoryManager:
 
         status = ActionStatus.SUCCESS if results else ActionStatus.WARNING
         message = f"Resultados para '{query}'." if results else f"No encontré resultados para '{query}'."
-        return ActionResult(bool(results), status, "memory", "search", message, results)
+        return ActionResult(
+            success=bool(results),
+            status=status,
+            module="memory",
+            command="search",
+            message=message,
+            data=results
+        )
 
     def search_text(self, data: dict | None = None) -> ActionResult:
         """Alias explícito de `search()` para búsquedas puramente textuales."""
@@ -527,7 +729,14 @@ class MemoryManager:
             "mas_usadas": mas_usadas,
             "ultimo_acceso": ultimo_acceso,
         }
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "statistics", "Estadísticas de memoria.", stats)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="statistics",
+            message="Estadísticas de memoria.",
+            data=stats
+        )
 
     def summary(self, data: dict | None = None) -> ActionResult:
         """Resumen inteligente en lenguaje natural + estadísticas, listo para mostrarse o pasarse a un LLM."""
@@ -535,37 +744,83 @@ class MemoryManager:
         text = self.summarize()
         payload = {"resumen": text, "estadisticas": stats_result.data}
         message = text if self.memory else "No tengo recuerdos."
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "summary", message, payload)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="summary",
+            message=message,
+            data=payload
+        )
 
     def count(self, data: dict | None = None) -> ActionResult:
         """Cantidad total de memorias almacenadas (firma y mensaje originales preservados)."""
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "count", f"Tengo {len(self.memory)} memorias.", {"count": len(self.memory)})
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="count",
+            message=f"Tengo {len(self.memory)} memorias.",
+            data={"count": len(self.memory)}
+        )
 
     def most_used(self, data: dict | None = None) -> ActionResult:
         limit = data.get("limit", DEFAULT_FIND_LIMIT) if data else DEFAULT_FIND_LIMIT
         items = sorted(self.memory.items(), key=lambda kv: kv[1].get("times_used", 0), reverse=True)[:limit]
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "most_used", "Memorias más usadas.", dict(items))
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="most_used",
+            message="Memorias más usadas.",
+            data=dict(items)
+        )
 
     def least_used(self, data: dict | None = None) -> ActionResult:
         limit = data.get("limit", DEFAULT_FIND_LIMIT) if data else DEFAULT_FIND_LIMIT
         items = sorted(self.memory.items(), key=lambda kv: kv[1].get("times_used", 0))[:limit]
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "least_used", "Memorias menos usadas.", dict(items))
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="least_used",
+            message="Memorias menos usadas.",
+            data=dict(items)
+        )
 
     def categories(self, data: dict | None = None) -> ActionResult:
         """Categorías existentes con su cantidad de memorias."""
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "categories", "Categorías disponibles.", self._category_counts())
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="categories",
+            message="Categorías disponibles.",
+            data=self._category_counts()
+        )
 
     def tags(self, data: dict | None = None) -> ActionResult:
         """Conjunto de todas las etiquetas usadas en memoria."""
         todas = sorted(tag for tag, keys in self._tag_index.items() if keys)
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "tags", "Etiquetas disponibles.", todas)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="tags",
+            message="Etiquetas disponibles.",
+            data=todas
+        )
 
     def memory_size(self, data: dict | None = None) -> ActionResult:
         """Tamaño aproximado en bytes que ocupa la memoria serializada."""
         size_bytes = len(json.dumps(self.memory, ensure_ascii=False, default=str).encode("utf-8"))
         return ActionResult(
-            True, ActionStatus.SUCCESS, "memory", "memory_size",
-            f"La memoria ocupa {size_bytes} bytes.", {"bytes": size_bytes, "entries": len(self.memory)},
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="memory_size",
+            message=f"La memoria ocupa {size_bytes} bytes.",
+            data={"bytes": size_bytes, "entries": len(self.memory)}
         )
 
     # ==================================================
@@ -620,7 +875,14 @@ class MemoryManager:
             limit = data.get("limit", DEFAULT_FIND_LIMIT) if isinstance(data, dict) else DEFAULT_FIND_LIMIT
 
             if not text:
-                return ActionResult(True, ActionStatus.SUCCESS, "memory", "rank_memories", "Memorias ordenadas por relevancia.", [])
+                return ActionResult(
+                    success=True,
+                    status=ActionStatus.SUCCESS,
+                    module="memory",
+                    command="rank_memories",
+                    message="Memorias ordenadas por relevancia.",
+                    data=[]
+                )
 
             scored = (
                 (key, self.score_relevance(key, text), record)
@@ -632,12 +894,12 @@ class MemoryManager:
             # Limitar resultados y devolver
             top = relevant[:limit]
             return ActionResult(
-                True,
-                ActionStatus.SUCCESS,
-                "memory",
-                "rank_memories",
-                f"Memorias ordenadas por relevancia respecto a '{text}'.",
-                top,
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="memory",
+                command="rank_memories",
+                message=f"Memorias ordenadas por relevancia respecto a '{text}'.",
+                data=top    
             )
 
 
@@ -649,7 +911,14 @@ class MemoryManager:
         query_text = text or (context.get("last_user_message") if isinstance(context, dict) else "") or ""
         ranked = self.rank_memories({"text": query_text, "limit": DEFAULT_FIND_LIMIT})
         message = "Sugerencias de memoria." if ranked.data else "No encontré memorias relevantes."
-        return ActionResult(bool(ranked.data), ranked.status, "memory", "suggest_memories", message, ranked.data)
+        return ActionResult(
+            success=bool(ranked.data),
+            status=ranked.status,
+            module=ranked.module,
+            command=ranked.command,
+            message=message,
+            data=ranked.data
+        )
 
     def consult(self, query: str, context: dict | None = None) -> ActionResult:
         """
@@ -669,7 +938,13 @@ class MemoryManager:
         turn_id = data.get("turn_id") or self._generate_id()
         value = data.get("response") or data.get("message") or ""
         if not value:
-            return ActionResult(False, ActionStatus.WARNING, "memory", "remember_turn", "El turno no tiene contenido para recordar.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="memory",
+                command="remember_turn",
+                message="El turno no tiene contenido para recordar."
+            )
 
         return self.remember({
             "key": f"turno:{turn_id}",
@@ -698,7 +973,13 @@ class MemoryManager:
 
         record = self.memory.get(key)
         if record is None:
-            return ActionResult(False, ActionStatus.WARNING, "memory", "find_similar", f"No existe '{key}' en memoria.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="memory",
+                command="find_similar",
+                message=f"No existe '{key}' en memoria."
+            )
 
         category = record.get("category")
         tags = set(record.get("tags", []))
@@ -726,7 +1007,14 @@ class MemoryManager:
         similar = [{"key": k, "score": s, "record": r} for k, s, r in candidates[:limit]]
 
         message = "Memorias similares encontradas." if similar else "No se encontraron memorias similares."
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "find_similar", message, similar)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="find_similar",
+            message=message,
+            data=similar
+        )
 
     def search_semantic(self, data: dict) -> ActionResult:
         """
@@ -759,7 +1047,14 @@ class MemoryManager:
         """Punto de entrada explícito para volcar cambios pendientes (usa el dirty flag)."""
         wrote = self.save(force=False)
         message = "Memoria sincronizada en disco." if wrote else "No había cambios pendientes."
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "autosave", message, {"saved": wrote})
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="autosave",
+            message=message,
+            data={"saved": wrote}
+        )
 
     def mark_dirty(self) -> None:
         """Marca la memoria como modificada, pendiente de persistir."""
@@ -772,7 +1067,14 @@ class MemoryManager:
             self._write_storage(path, self.memory)
             self._dirty = False
             self._last_saved_at = self._now()
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "export", "Memoria exportada correctamente.", {"path": path})
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="export",
+            message="Memoria exportada correctamente.",
+            data={"path": path}
+            )
 
     def import_memories(self, data: dict | None = None) -> ActionResult:
         """Importa memorias desde un archivo JSON externo, fusionándolas con las actuales."""
@@ -792,16 +1094,36 @@ class MemoryManager:
                 self.mark_dirty()
                 self.save(force=True)
 
-            return ActionResult(True, ActionStatus.SUCCESS, "memory", "import_memories", "Memoria importada correctamente.", self.memory)
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="memory",
+                command="import_memories",
+                message="Memoria importada correctamente.",
+                data=self.memory
+            )
         except Exception as exc:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "import_memories", f"Error al importar: {exc}")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="import_memories",
+                message=f"Error al importar: {exc}"
+            )
 
     def backup(self, data: dict | None = None) -> ActionResult:
         """Crea una copia de seguridad de la memoria actual."""
         path = (data.get("path") if data else None) or BACKUP_PATH
         with self._lock:
             self._write_storage(path, self.memory)
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "backup", f"Backup creado en {path}.", {"path": path})
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="backup",
+            message=f"Backup creado en {path}.",
+            data={"path": path}
+        )
 
     def restore(self, data: dict | None = None) -> ActionResult:
         """Restaura la memoria desde una copia de seguridad."""
@@ -809,7 +1131,13 @@ class MemoryManager:
         contenido = self._read_storage(path)
 
         if not contenido:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "restore", "No se encontró backup.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="restore",
+                message="No se encontró backup."
+            )
 
         with self._lock:
             self.memory = {self._normalize(key): self._normalize_record(record) for key, record in contenido.items()}
@@ -817,12 +1145,24 @@ class MemoryManager:
             self.mark_dirty()
             self.save(force=True)
 
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "restore", "Memoria restaurada desde backup.")
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="restore",
+            message="Memoria restaurada desde backup."
+        )
 
     def sync(self, data: dict | None = None) -> ActionResult:
         """Fuerza el volcado a disco, haya o no cambios pendientes."""
         self.save(force=True)
-        return ActionResult(True, ActionStatus.SUCCESS, "memory", "sync", "Memoria sincronizada.")
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="sync",
+            message="Memoria sincronizada."
+        )
 
     def validate(self, data: dict | None = None) -> ActionResult:
         """Valida que el archivo de memoria en disco sea JSON íntegro."""
@@ -830,11 +1170,29 @@ class MemoryManager:
         try:
             with open(path, "r", encoding="utf-8") as file_handle:
                 json.load(file_handle)
-            return ActionResult(True, ActionStatus.SUCCESS, "memory", "validate", f"Archivo {path} válido.")
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="memory",
+                command="validate",
+                message=f"Archivo {path} válido."
+            )
         except FileNotFoundError:
-            return ActionResult(False, ActionStatus.WARNING, "memory", "validate", f"El archivo {path} no existe todavía.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="memory",
+                command="validate",
+                message=f"El archivo {path} no existe todavía."
+            )
         except Exception as exc:
-            return ActionResult(False, ActionStatus.ERROR, "memory", "validate", f"Archivo corrupto: {exc}")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="validate",
+                message=f"Archivo corrupto: {exc}"
+            )
 
     def summarize(self) -> str:
         """Resumen en texto plano de toda la memoria (firma original preservada)."""

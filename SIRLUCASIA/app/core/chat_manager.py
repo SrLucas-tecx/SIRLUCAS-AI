@@ -30,7 +30,7 @@ class ChatManager:
 
         return ActionResult(
             success=True,
-            status=ActionStatus.OK,
+            status=ActionStatus.SUCCESS,
             module="conversation",
             command="chat",
             message=PLACEHOLDER_MESSAGE,

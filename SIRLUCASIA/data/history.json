@@ -1,63 +1,11 @@
 [
     {
-        "id": "e4496561-9483-4a09-8805-3722844e6cf9",
-        "timestamp": "2026-08-09T17:40:26.732217",
-        "module": "document",
-        "command": "create",
-        "topic": {
-            "filename": "prueba_5.docx"
-        },
-        "status": null,
-        "result": null,
-        "duration": null,
-        "user_input": null
-    },
-    {
-        "id": "75e0741c-805b-4914-978b-3b6b95430fc7",
-        "timestamp": "2026-08-09T17:40:43.315596",
-        "module": "document",
-        "command": "create",
-        "topic": {
-            "filename": "prueba.docx"
-        },
-        "status": null,
-        "result": null,
-        "duration": null,
-        "user_input": null
-    },
-    {
-        "id": "33c34990-72fb-4554-a022-243ef8596118",
-        "timestamp": "2026-08-09T17:44:56.861605",
+        "id": "e1a28214-6d8b-42bd-98b2-868d299fc468",
+        "timestamp": "2026-08-10T00:42:13.101448",
         "module": "conversation",
         "command": "chat",
         "topic": {
-            "topic": "crea un documento con el nombre j"
-        },
-        "status": null,
-        "result": null,
-        "duration": null,
-        "user_input": null
-    },
-    {
-        "id": "8c8e1532-2c6a-498a-b325-e906bd6b8440",
-        "timestamp": "2026-08-09T17:45:16.863282",
-        "module": "document",
-        "command": "create",
-        "topic": {
-            "filename": "prueba.docx"
-        },
-        "status": null,
-        "result": null,
-        "duration": null,
-        "user_input": null
-    },
-    {
-        "id": "de08bd8d-3447-4c5c-b79b-f18e236fd968",
-        "timestamp": "2026-08-09T17:48:03.902446",
-        "module": "conversation",
-        "command": "chat",
-        "topic": {
-            "topic": "lista word"
+            "topic": "hola"
         },
         "status": null,
         "result": null,

@@ -52,8 +52,14 @@ Contratos asumidos (a confirmar):
 from __future__ import annotations
 
 import logging
+import json
+import random
+import os
+
 from typing import Any
 
+from SIRLUCASIA.app.core.action_result import ActionResult
+from SIRLUCASIA.app.core.action_status import ActionStatus
 from app.core.memory_manager import MemoryManager
 from app.core.knowledge_manager import KnowledgeManager
 from app.core.context_manager import ContextManager
@@ -75,18 +81,33 @@ class ConversationManager:
         context: ContextManager | None = None,
         task_executor: TaskExecutor | None = None,
     ) -> None:
-        # Inyección de dependencias con defaults: permite tanto el uso
-        # normal (SIRLUCAS instancia todo) como pruebas unitarias con
-        # mocks, sin cambiar la firma pública del constructor.
+        # Inyección de dependencias con defaults
         self.memory = memory or MemoryManager()
         self.knowledge = knowledge or KnowledgeManager()
         self.context = context or ContextManager()
-        # TaskExecutor exige (router, event_bus): no se puede construir
-        # uno por defecto. Si no se inyecta, queda en None y `_run_task`
-        # simplemente no delega.
         self.task_executor = task_executor
 
-        logger.info("[ConversationManager] Inicializado correctamente.")
+        # 🔧 Cargar los JSON externos
+
+        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+        base_path = os.path.abspath(base_path)  # normalizar ruta
+
+        try:
+            with open(os.path.join(base_path, "intents.json"), "r", encoding="utf-8") as f:
+                self.intents = json.load(f)
+        except FileNotFoundError:
+            logger.warning("[ConversationManager] No se encontró 'intents.json'. Se usarán valores por defecto.")
+            self.intents = {}
+
+        try:
+            with open(os.path.join(base_path, "responses.json"), "r", encoding="utf-8") as f:
+                self.responses = json.load(f)
+        except FileNotFoundError:
+            logger.warning("[ConversationManager] No se encontró 'responses.json'. Se usarán valores por defecto.")
+            self.responses = {}
+
+        logger.info("[ConversationManager] Inicializado correctamente con intents y responses.")
+
 
     # ==================================================
     # Dispatcher (comportamiento original preservado)
@@ -95,7 +116,14 @@ class ConversationManager:
         command = data.get("command")
         method = getattr(self, command, None)
         if method is None:
-            return f"No existe el comando '{command}'."
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="conversation",
+                command=command,
+                message=f"No existe el comando '{command}'.",
+                error=f"Comando '{command}' no implementado en ConversationManager.",
+            )
         return method(data)
 
     # ==================================================
@@ -113,7 +141,14 @@ class ConversationManager:
         """
         message = data.get("message") or data.get("topic")
         if not message:
-            return None
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="conversation",
+                command="process",
+                message="No especificaste un mensaje.",
+                error="El campo 'message' es obligatorio.",
+            )
 
         context_snapshot = self._get_context_snapshot()
         memory_hits = self._consult_memory(message, context_snapshot)
@@ -123,12 +158,19 @@ class ConversationManager:
         self._persist_context(message, response)
         self._persist_memory(message, response)
 
-        return response
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="conversation",
+            command="process",
+            message="Turno de conversación procesado correctamente.",
+            data={"response": response, "context": context_snapshot, "memory": memory_hits},
+        )
 
     # ==================================================
     # Compatibilidad hacia atrás
     # ==================================================
-    def talk(self, data: dict) -> Any:
+    def talk(self, data: dict) -> ActionResult:
         """
         Se conserva por compatibilidad con integraciones existentes que
         ya llaman a `talk()`. La lógica de "buscar una respuesta para un
@@ -136,10 +178,35 @@ class ConversationManager:
         """
         topic = data.get("topic")
         if topic is None:
-            return None
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="conversation",
+                command="talk",
+                message="No especificaste un tema.",
+                error="Campo 'topic' vacío."
+            )
 
         response = self._consult_knowledge(topic, context=None)
-        return response if response is not None else "No tengo una respuesta para eso."
+        if response is None:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="conversation",
+                command="talk",
+                message="No tengo una respuesta para eso.",
+                error="No se encontró conocimiento para el tema especificado."
+            )
+
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="conversation",
+            command="talk",
+            message="Respuesta obtenida.",
+            data={"response": response}
+        )
+
 
     # ==================================================
     # Helpers privados de orquestación (sin lógica propia,
@@ -202,8 +269,16 @@ class ConversationManager:
     def _run_task(self, data: dict) -> Any:
         """Delega en TaskExecutor. TODO: confirmar nombre real (run/execute/dispatch)."""
         if self.task_executor is None:
+
             logger.warning("[ConversationManager] Sin TaskExecutor inyectado: no se ejecuta la tarea.")
-            return None
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="conversation",
+                command="process",
+                message="No se puede ejecutar la tarea: TaskExecutor no disponible.",
+                error="TaskExecutor no disponible.",
+            )
 
         for method_name in ("run", "execute", "dispatch"):
             method = getattr(self.task_executor, method_name, None)
@@ -218,27 +293,64 @@ class ConversationManager:
         """
         Decide, de forma puramente orquestadora, a quién le corresponde
         resolver el mensaje: si trae un `command`/`task` explícito se
-        delega en TaskExecutor; si no, se consulta a KnowledgeManager
-        (que a su vez puede apoyarse en `memory_hits` como contexto).
+        delega en TaskExecutor; si no, primero intenta responder con los
+        JSON de intents/responses; si no, se consulta a KnowledgeManager.
         """
+        intent_tag = raw_data.get("rule") or raw_data.get("tag")
+
+        # Buscar en responses.json
+        if hasattr(self, "responses") and intent_tag in self.responses:
+            return random.choice(self.responses[intent_tag])
+
+        # Buscar en intents.json
+        if hasattr(self, "intents"):
+            for intent in self.intents.get("intents", []):
+                if intent["tag"] == intent_tag:
+                    return random.choice(intent["responses"])
+
+        # Si hay comando/tarea explícito
         if raw_data.get("command") or raw_data.get("task"):
             task_payload = {**raw_data, "context": context, "memory": memory_hits}
             return self._run_task(task_payload)
 
+        # Fallback: KnowledgeManager
         return self._consult_knowledge(message, {"context": context, "memory": memory_hits})
+
+
 
     def _fallback_execute(self, target: Any, command: str, data: dict) -> Any:
         """
         Último recurso: si el sub-manager no expone ninguno de los
         métodos "esperados" por nombre, se intenta su dispatcher
-        uniforme `execute({"command": ...})` (el mismo contrato que ya
-        usa MemoryManager). Nunca lanza excepción hacia arriba.
+        uniforme `execute({"command": ...})`. Nunca lanza excepción.
         """
         execute = getattr(target, "execute", None)
         if not callable(execute):
-            return None
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="conversation",
+                command="process",
+                message="No se puede ejecutar la tarea: TaskExecutor no disponible.",
+                error="TaskExecutor no disponible.",
+            )
         try:
-            result = execute({"command": command, **data} if isinstance(data, dict) else {"command": command})
-            return getattr(result, "data", result)
+            result = execute(
+                {"command": command, **data} if isinstance(data, dict) else {"command": command})
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="conversation",
+                command="process",
+                message="Tarea ejecutada correctamente.",
+                data={"result": result}
+            )
         except Exception:
-            return None
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="conversation",
+                command="process",
+                message="Error al ejecutar la tarea.",
+                error="Error inesperado al ejecutar la tarea.",
+            )

@@ -1,10 +1,15 @@
 import re
 import unicodedata
 
+
 class Normalizer:
 
     def __init__(self):
+
+        # ==================================================
         # Palabras de ruido
+        # ==================================================
+
         self.noise_words = [
             "por favor",
             "quisiera",
@@ -13,7 +18,10 @@ class Normalizer:
             "podrias"
         ]
 
-        # Verbos a normalizar
+        # ==================================================
+        # Verbos
+        # ==================================================
+
         self.verb_map = {
             "abre": "abrir",
             "abriras": "abrir",
@@ -22,7 +30,10 @@ class Normalizer:
             "ejecuta": "ejecutar",
         }
 
+        # ==================================================
         # Aplicaciones conocidas
+        # ==================================================
+
         self.app_map = {
             "google chrome": "chrome",
             "navegador": "chrome",
@@ -31,48 +42,118 @@ class Normalizer:
             "hojas de calculo": "excel",
         }
 
+    # ==================================================
+    # NORMALIZE
+    # ==================================================
+
     def normalize(self, text: str) -> str:
+
         if not isinstance(text, str):
             return ""
 
-        # Limpieza básica
-        text = text.strip().lower()
+        # Limpiar espacios
+        text = text.strip()
+
+        # Minúsculas
+        text = text.lower()
+
+        # Eliminar acentos
         text = "".join(
-            c for c in unicodedata.normalize("NFD", text)
+            c
+            for c in unicodedata.normalize("NFD", text)
             if unicodedata.category(c) != "Mn"
         )
-        text = re.sub(r"[¿?¡!;,:\(\)\"']", "", text)
+
+        # Eliminar signos de puntuación
+        #
+        # IMPORTANTE:
+        # NO eliminamos "." porque los documentos pueden
+        # contener extensiones como demo.txt
+        #
+        text = re.sub(
+            r"[¿?¡!;,:\(\)\"']",
+            "",
+            text
+        )
+
+        # Normalizar espacios
         text = re.sub(r"\s+", " ", text)
 
-        # Aplicar normalizaciones
+        # Eliminar palabras de ruido
         text = self.remove_noise(text)
+
+        # Normalizar verbos
         text = self.normalize_verbs(text)
+
+        # Normalizar aplicaciones únicamente
+        # cuando corresponde
         text = self.normalize_apps(text)
 
+        text = text.strip()
+
         print(f"[Normalizer] -> {text}")
+
         return text
+
+    # ==================================================
+    # REMOVE NOISE
+    # ==================================================
 
     def remove_noise(self, text: str) -> str:
+
         for word in self.noise_words:
             text = text.replace(word, "")
+
+        # Volver a limpiar espacios
+        text = re.sub(r"\s+", " ", text)
+
         return text.strip()
 
+    # ==================================================
+    # NORMALIZE VERBS
+    # ==================================================
+
     def normalize_verbs(self, text: str) -> str:
-        for k, v in self.verb_map.items():
-            text = text.replace(k, v)
+
+        for original, normalized in self.verb_map.items():
+
+            # \b evita reemplazos dentro de otras palabras
+            text = re.sub(
+                rf"\b{re.escape(original)}\b",
+                normalized,
+                text
+            )
+
         return text
 
-    def normalize_apps(self, text: str) -> str:
-        """
-        Contextualiza la normalización de aplicaciones:
-        - Si la frase empieza con 'abrir', 'iniciar', 'ejecutar' → aplica app_map.
-        - Si la frase empieza con 'lista', 'muestra', 'lee', 'crea' → NO aplica app_map.
-        """
-        # Detectar intención por el primer verbo
-        first_word = text.split(" ")[0]
+    # ==================================================
+    # NORMALIZE APPS
+    # ==================================================
 
-        if first_word in ["abrir", "inicia", "ejecutar"]:
-            for k, v in self.app_map.items():
-                text = text.replace(k, v)
+    def normalize_apps(self, text: str) -> str:
+
+        words = text.split()
+
+        if not words:
+            return text
+
+        first_word = words[0]
+
+        # Solo normalizamos aplicaciones cuando
+        # realmente estamos hablando de abrir/iniciar/ejecutar
+        if first_word in {
+            "abrir",
+            "iniciar",
+            "inicia",
+            "ejecutar",
+        }:
+
+            for original, normalized in self.app_map.items():
+
+                text = re.sub(
+                    rf"\b{re.escape(original)}\b",
+                    normalized,
+                    text
+                )
 
         return text

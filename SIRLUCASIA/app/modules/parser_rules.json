@@ -212,24 +212,37 @@
     "topic_group": 1
   },
   {
-  "name": "cerrar_referencia",
-  "module": "system",
-  "priority": 2,
-  "regex": [
-    "^cierralo$",
-    "^ciérralo$",
-    "^cierrala$",
-    "^ciérrala$",
-    "^cerrarlo$",
-    "^cerrarla$",
-    "^terminalo$",
-    "^termínalo$",
-    "^terminala$",
-    "^termínala$"
-  ],
-  "command": "close",
-  "topic": "lo"
-},
+    "name": "cerrar_referencia",
+    "module": "system",
+    "priority": 2,
+    "regex": [
+      "^cierralo$",
+      "^ciérralo$",
+      "^cierrala$",
+      "^ciérrala$",
+      "^cerrarlo$",
+      "^cerrarla$",
+      "^terminalo$",
+      "^termínalo$",
+      "^terminala$",
+      "^termínala$"
+    ],
+    "command": "close",
+    "topic": "lo"
+  },
+  {
+    "name": "cerrar_app",
+    "module": "system",
+    "priority": 10,
+    "regex": [
+      "^cierra (.+)$",
+      "^cerrar (.+)$",
+      "^termina (.+)$",
+      "^finaliza (.+)$"
+    ],
+    "command": "close",
+    "topic_group": 1
+  },
   {
     "name": "reiniciar_app",
     "module": "system",
@@ -246,22 +259,22 @@
     "module": "calculator",
     "priority": 8,
     "regex": [
-    "^cuanto es (.+)$",
-    "^cuanto da (.+)$",
-    "^calcula (.+)$",
-    "^calcular (.+)$",
-    "^puedes calcular (.+)$",
-    "^puedes calcularme (.+)$",
-    "^me puedes calcular (.+)$",
-    "^calcula cuanto es (.+)$",
-    "^resuelve (.+)$",
-    "^resolver (.+)$",
-    "^resuelve la operacion (.+)$",
-    "^resuelve esta operacion (.+)$",
-    "^cual es el resultado de (.+)$",
-    "^cual es el resultado de la operacion (.+)$",
-    "^haz (.+)$"
-],
+      "^cuanto es (.+)$",
+      "^cuanto da (.+)$",
+      "^calcula (.+)$",
+      "^calcular (.+)$",
+      "^puedes calcular (.+)$",
+      "^puedes calcularme (.+)$",
+      "^me puedes calcular (.+)$",
+      "^calcula cuanto es (.+)$",
+      "^resuelve (.+)$",
+      "^resolver (.+)$",
+      "^resuelve la operacion (.+)$",
+      "^resuelve esta operacion (.+)$",
+      "^cual es el resultado de (.+)$",
+      "^cual es el resultado de la operacion (.+)$",
+      "^haz (.+)$"
+    ],
     "command": "calculate",
     "topic_group": 1
   },
@@ -304,8 +317,8 @@
     "command": "write",
     "priority": 15,
     "regex": [
-      "^escribe en ([a-zA-Z0-9_-]+) (.+)$",
-      "^agrega al documento ([a-zA-Z0-9_-]+) (.+)$"
+      "^escribe en ([a-zA-Z0-9_.-]+) (.+)$",
+      "^agrega al documento ([a-zA-Z0-9_.-]+) (.+)$"
     ],
     "topic_group": 1,
     "content_group": 2
@@ -330,7 +343,8 @@
       "^elimina (.+)$",
       "^borra (.+)$",
       "^elimina documento (.+)$",
-      "^borrar documento (.+)$"
+      "^borrar documento (.+)$",
+      "^eliminar (.+)$"
     ],
     "topic_group": 1
   },
@@ -387,42 +401,40 @@
     "module": "conversation",
     "priority": 100,
     "regex": [
-    "^hola+$",
-    "^holi$",
-    "^(hello|hi|hey)$",
-    "^buen dia$",
-    "^buenos dias$",
-    "^buenas$",
-    "^buenas tardes$",
-    "^buenas noches$",
-    "^(que onda|qué onda)$",
-    "^(que tal|qué tal)$",
-    "^(como estas|cómo estas|cómo te encuentras)$",
-    "^gracias$",
-    "^muchas gracias$",
-    "^te agradezco$",
-    "^(adios|adiós|hasta luego|nos vemos|bye)$",
-    "^quien eres$",
-    "^quién eres$"
-  ],
+      "^hola+$",
+      "^holi$",
+      "^(hello|hi|hey)$",
+      "^buen dia$",
+      "^buenos dias$",
+      "^buenas$",
+      "^buenas tardes$",
+      "^buenas noches$",
+      "^(que onda|qué onda)$",
+      "^(que tal|qué tal)$",
+      "^(como estas|cómo estas|cómo te encuentras)$",
+      "^gracias$",
+      "^muchas gracias$",
+      "^te agradezco$",
+      "^quien eres$",
+      "^quién eres$"
+    ],
     "command": "talk",
     "topic_group": 0
   },
   {
-  "name": "conversacion_despedidas",
-  "module": "conversation",
-  "priority": 100,
-  "regex": [
-    "^(adios|adiós)$",
-    "^(hasta luego|nos vemos|bye)$",
-    "^(chao|chau)$",
-    "^(cuídate|que te vaya bien)$",
-    "^(hasta pronto|hasta mañana)$"
-  ],
-  "command": "goodbye",
-  "topic_group": 0
-}
-,
+    "name": "conversacion_despedidas",
+    "module": "conversation",
+    "priority": 100,
+    "regex": [
+      "^(adios|adiós)$",
+      "^(hasta luego|nos vemos|bye)$",
+      "^(chao|chau)$",
+      "^(cuídate|que te vaya bien)$",
+      "^(hasta pronto|hasta mañana)$"
+    ],
+    "command": "goodbye",
+    "topic_group": 0
+  },
   {
     "name": "historial",
     "module": "history",
@@ -435,21 +447,6 @@
       "^que hice$"
     ],
     "command": "history"
-  },
-  {
-    "name": "cerrar_referencia",
-    "module": "system",
-    "priority": 2,
-    "regex": [
-      "^cierralo$",
-      "^ciérralo$",
-      "^cierrala$",
-      "^ciérrala$",
-      "^terminalo$",
-      "^termínalo$"
-    ],
-    "command": "close",
-    "topic": "lo"
   },
   {
     "name": "crear_documento",
@@ -466,32 +463,33 @@
     "topic_group": 2
   },
   {
-  "name": "crear_documento_con_contenido_llamado",
-  "module": "document",
-  "priority": 10,
-  "regex": [
-    "^crea un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$",
-    "^crear un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$"
-  ],
-  "command": "create",
-  "topic_group": 1,
-  "content_group": 2,
-  "format": "docx"
-},
-{
-  "name": "crear_documento_con_contenido",
-  "module": "document",
-  "priority": 25,
-  "regex": [
-    "^crea un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
-    "^crear un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$"
-  ],
-  "command": "create",
-  "format_group": 1,
-  "topic_group": 2,
-  "content_group": 3
-}
-,
+    "name": "crear_documento_con_contenido_llamado",
+    "module": "document",
+    "priority": 10,
+    "regex": [
+      "^crea un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$",
+      "^crear un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$"
+    ],
+    "command": "create",
+    "topic_group": 1,
+    "content_group": 2,
+    "format": "docx"
+  },
+  {
+    "name": "crear_documento_con_contenido",
+    "module": "document",
+    "priority": 25,
+    "regex": [
+      "^crea un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
+      "^crear un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
+      "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+) con el texto (.+)$",
+      "^crear un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+) con el texto (.+)$"
+    ],
+    "command": "create",
+    "format_group": 1,
+    "topic_group": 2,
+    "content_group": 3
+  },
   {
     "name": "listar_documentos_por_formato",
     "module": "document",
@@ -510,284 +508,278 @@
     "module": "calculator",
     "priority": 5,
     "regex": [
-        "^([0-9]+(?:\\.[0-9]+)?(?:\\s*[+\\-*/%^]\\s*[0-9]+(?:\\.[0-9]+)?)+)$"
+      "^([0-9]+(?:\\.[0-9]+)?(?:\\s*[+\\-*/%^]\\s*[0-9]+(?:\\.[0-9]+)?)+)$"
     ],
     "command": "calculate",
     "topic_group": 0
-},
-{
-  "name": "olvidar_memoria",
-  "module": "memory",
-  "priority": 2,
+  },
+  {
+    "name": "olvidar_memoria",
+    "module": "memory",
+    "priority": 1,
+    "regex": [
+      "^olvida (.+)$"
+    ],
+    "command": "forget",
+    "key_group": 1
+  },
+  {
+    "name": "actualizar_memoria_directa",
+    "module": "memory",
+    "priority": 2,
+    "regex": [
+      "^actualiza (.+) a (.+)$",
+      "^cambia (.+) a (.+)$"
+    ],
+    "command": "update",
+    "key_group": 1,
+    "value_group": 2
+  },
+  {
+    "name": "listar_memorias_por_categoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^lista memorias de categoria (.+)$",
+      "^listar memorias de categoria (.+)$",
+      "^muestrame mis memorias de categoria (.+)$",
+      "^que memorias de categoria (.+) tengo$"
+    ],
+    "command": "list_by_category",
+    "category_group": 1
+  },
+  {
+    "name": "buscar_memoria_por_categoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^busca memorias de categoria (.+)$",
+      "^buscar memorias de categoria (.+)$",
+      "^encuentra memorias de categoria (.+)$"
+    ],
+    "command": "search_by_category",
+    "category_group": 1
+  },
+  {
+    "name": "resumen_memoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^que recuerdas$",
+      "^qué recuerdas$",
+      "^resumen de memoria$"
+    ],
+    "command": "summary"
+  },
+  {
+    "name": "actualizar_memoria_contextual",
+    "module": "memory",
+    "priority": 2,
+    "regex": [
+      "^mi (.+) ahora es (.+)$",
+      "^ahora mi (.+) es (.+)$"
+    ],
+    "command": "update",
+    "key_group": 1,
+    "value_group": 2
+  },
+  {
+    "name": "reiniciar_referencia",
+    "module": "system",
+    "priority": 2,
+    "regex": [
+      "^reinicialo$",
+      "^reinícialo$",
+      "^reiníciala$",
+      "^reiniciala$"
+    ],
+    "command": "restart",
+    "topic": "lo"
+  },
+  {
+    "name": "cerrar_generico",
+    "module": "system",
+    "priority": 2,
+    "regex": [
+      "^cierra$",
+      "^cerrar$"
+    ],
+    "command": "close",
+    "topic": "lo"
+  },
+  {
+    "name": "leer_referencia",
+    "module": "document",
+    "priority": 2,
+    "regex": [
+      "^leelo$",
+      "^léelo$",
+      "^leela$",
+      "^léela$"
+    ],
+    "command": "read",
+    "topic": "lo"
+  },
+  {
+    "name": "escribir_referencia",
+    "module": "document",
+    "priority": 2,
+    "regex": [
+      "^escribelo (.+)$",
+      "^escríbelo (.+)$",
+      "^escribela (.+)$",
+      "^escríbela (.+)$"
+    ],
+    "command": "write",
+    "topic": "lo",
+    "content_group": 1
+  },
+  {
+    "name": "cerrar_documento_referencia",
+    "module": "document",
+    "priority": 2,
+    "regex": [
+      "^cierralo$",
+      "^ciérralo$",
+      "^cierrala$",
+      "^ciérrala$"
+    ],
+    "command": "delete",
+    "topic": "lo"
+  },
+  {
+    "name": "renombrar_documento_referencia",
+    "module": "document",
+    "priority": 2,
+    "regex": [
+      "^renombralo a (.+)$",
+      "^renómbralo a (.+)$",
+      "^renombrala a (.+)$",
+      "^renómbrala a (.+)$"
+    ],
+    "command": "rename",
+    "topic": "lo",
+    "new_name_group": 1
+  },
+  {
+    "name": "eliminar_documento_referencia",
+    "module": "document",
+    "priority": 10,
+    "regex": [
+      "^elimínalo$",
+      "^eliminalo$",
+      "^bórralo$",
+      "^borralo$",
+      "^elimínala$",
+      "^eliminala$",
+      "^bórrala$",
+      "^borrrala$"
+    ],
+    "command": "delete",
+    "topic": "lo"
+  },
+  {
+    "name": "crear_bloc_de_notas",
+    "module": "document",
+    "priority": 15,
+    "regex": [
+      "^crea un bloc de notas llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un bloc de notas llamado ([a-zA-Z0-9_-]+)$",
+      "^crea un blog de notas llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "txt",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_markdown",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un markdown llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un archivo md llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "md",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_json",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un json llamado ([a-zA-Z0-9_-]+)$",
+      "^crea un archivo json llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un json llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "json",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_pdf",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un pdf llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un archivo pdf llamado ([a-zA-Z0-9_-]+)$",
+      "^genera un reporte pdf llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "pdf",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_word",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un word llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un documento word llamado ([a-zA-Z0-9_-]+)$",
+      "^crea un documento de texto llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "docx",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_excel",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un excel llamado ([a-zA-Z0-9_-]+)$",
+      "^crear una hoja de calculo llamada ([a-zA-Z0-9_-]+)$",
+      "^crea una tabla en excel llamada ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "xlsx",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_presentacion",
+    "module": "document",
+    "priority": 20,
+    "regex": [
+      "^crea una presentacion llamada ([a-zA-Z0-9_-]+)$",
+      "^crear una presentacion llamada ([a-zA-Z0-9_-]+)$",
+      "^crea un powerpoint llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un pptx llamado ([a-zA-Z0-9_-]+)$",
+      "^genera una presentacion llamada ([a-zA-Z0-9_-]+)$",
+      "^haz una presentacion llamada ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "pptx",
+    "topic_group": 1
+  },
+  {
+  "name": "conversacion_saludo",
+  "module": "conversation",
+  "priority": 1,
   "regex": [
-    "^olvida (.+)$",
-    "^borra (.+)$",
-    "^elimina (.+)$"
+    "^(hola|holaa+|holi|holis|ola|aloha|hello|hi|hey|buenas|qué onda|que onda)$"
   ],
-  "command": "forget",
-  "key_group": 1
-},
-{
-  "name": "actualizar_memoria_directa",
-  "module": "memory",
-  "priority": 2,
-  "regex": [
-    "^actualiza (.+) a (.+)$",
-    "^cambia (.+) a (.+)$"
-  ],
-  "command": "update",
-  "key_group": 1,
-  "value_group": 2
-},
-{
-  "name": "listar_memorias_por_categoria",
-  "module": "memory",
-  "priority": 5,
-  "regex": [
-    "^lista memorias de categoria (.+)$",
-    "^listar memorias de categoria (.+)$",
-    "^muestrame mis memorias de categoria (.+)$",
-    "^que memorias de categoria (.+) tengo$"
-  ],
-  "command": "list_by_category",
-  "category_group": 1
-},
-{
-  "name": "buscar_memoria_por_categoria",
-  "module": "memory",
-  "priority": 5,
-  "regex": [
-    "^busca memorias de categoria (.+)$",
-    "^buscar memorias de categoria (.+)$",
-    "^encuentra memorias de categoria (.+)$"
-  ],
-  "command": "search_by_category",
-  "category_group": 1
-},
-{
-  "name": "resumen_memoria",
-  "module": "memory",
-  "priority": 5,
-  "regex": [
-    "^que recuerdas$",
-    "^qué recuerdas$",
-    "^resumen de memoria$"
-  ],
-  "command": "summary"
-},{
-  "name": "actualizar_memoria_contextual",
-  "module": "memory",
-  "priority": 2,
-  "regex": [
-    "^mi (.+) ahora es (.+)$",
-    "^ahora mi (.+) es (.+)$"
-  ],
-  "command": "update",
-  "key_group": 1,
-  "value_group": 2
-},
-{
-  "name": "reiniciar_referencia",
-  "module": "system",
-  "priority": 2,
-  "regex": [
-    "^reinicialo$",
-    "^reinícialo$",
-    "^reiníciala$",
-    "^reiniciala$"
-  ],
-  "command": "restart",
-  "topic": "lo"
-},
-{
-  "name": "cerrar_generico",
-  "module": "system",
-  "priority": 2,
-  "regex": [
-    "^cierra$",
-    "^cerrar$"
-  ],
-  "command": "close",
-  "topic": "lo"
-},
-{
-  "name": "leer_referencia",
-  "module": "document",
-  "priority": 2,
-  "regex": [
-    "^leelo$",
-    "^léelo$",
-    "^leela$",
-    "^léela$"
-  ],
-  "command": "read",
-  "topic": "lo"
-},
-{
-  "name": "escribir_referencia",
-  "module": "document",
-  "priority": 2,
-  "regex": [
-    "^escribelo (.+)$",
-    "^escríbelo (.+)$",
-    "^escribela (.+)$",
-    "^escríbela (.+)$"
-  ],
-  "command": "write",
-  "topic": "lo",
-  "content_group": 1
-},
-{
-  "name": "cerrar_documento_referencia",
-  "module": "document",
-  "priority": 2,
-  "regex": [
-    "^cierralo$",
-    "^ciérralo$",
-    "^cierrala$",
-    "^ciérrala$"
-  ],
-  "command": "delete",
-  "topic": "lo"
-},
-{
-  "name": "renombrar_documento_referencia",
-  "module": "document",
-  "priority": 2,
-  "regex": [
-    "^renombralo a (.+)$",
-    "^renómbralo a (.+)$",
-    "^renombrala a (.+)$",
-    "^renómbrala a (.+)$"
-  ],
-  "command": "rename",
-  "topic": "lo",
-  "new_name_group": 1
-}
-,
-{
-  "name": "eliminar_documento_referencia",
-  "module": "document",
-  "priority": 2,
-  "regex": [
-    "^elimínalo$",
-    "^eliminalo$",
-    "^bórralo$",
-    "^borralo$",
-    "^elimínala$",
-    "^eliminala$",
-    "^bórrala$",
-    "^borrrala$"
-  ],
-  "command": "delete",
-  "topic": "lo"
-},
-{
-  "name": "crear_bloc_de_notas",
-  "module": "document",
-  "priority": 15,
-  "regex": [
-    "^crea un bloc de notas llamado ([a-zA-Z0-9_-]+)$",
-    "^crear un bloc de notas llamado ([a-zA-Z0-9_-]+)$",
-    "^crea un blog de notas llamado ([a-zA-Z0-9_-]+)$"
-  ],
-  "command": "create",
-  "format": "txt",
+  "command": "talk",
   "topic_group": 1
-},
-{
-  "name": "crear_markdown",
-  "module": "document",
-  "priority": 15,
-  "regex": [
-    "^crea un markdown llamado ([a-zA-Z0-9_-]+)$",
-    "^crear un archivo md llamado ([a-zA-Z0-9_-]+)$"
-  ],
-  "command": "create",
-  "format": "md",
-  "topic_group": 1
-},
-{
-  "name": "crear_json",
-  "module": "document",
-  "priority": 15,
-  "regex": [
-    "^crea un archivo json llamado ([a-zA-Z0-9_-]+)$",
-    "^crear un json llamado ([a-zA-Z0-9_-]+)$"
-  ],
-  "command": "create",
-  "format": "json",
-  "topic_group": 1
-},
-{
-  "name": "crear_pdf",
-  "module": "document",
-  "priority": 15,
-  "regex": [
-    "^crea un pdf llamado ([a-zA-Z0-9_-]+)$",
-    "^crear un archivo pdf llamado ([a-zA-Z0-9_-]+)$",
-    "^genera un reporte pdf llamado ([a-zA-Z0-9_-]+)$"
-  ],
-  "command": "create",
-  "format": "pdf",
-  "topic_group": 1
-},
-{
-  "name": "crear_word",
-  "module": "document",
-  "priority": 15,
-  "regex": [
-    "^crea un word llamado ([a-zA-Z0-9_-]+)$",
-    "^crear un documento word llamado ([a-zA-Z0-9_-]+)$",
-    "^crea un documento de texto llamado ([a-zA-Z0-9_-]+)$"
-  ],
-  "command": "create",
-  "format": "docx",
-  "topic_group": 1
-},
-{
-  "name": "crear_excel",
-  "module": "document",
-  "priority": 15,
-  "regex": [
-    "^crea un excel llamado ([a-zA-Z0-9_-]+)$",
-    "^crear una hoja de calculo llamada ([a-zA-Z0-9_-]+)$",
-    "^crea una tabla en excel llamada ([a-zA-Z0-9_-]+)$"
-  ],
-  "command": "create",
-  "format": "xlsx",
-  "topic_group": 1
-},
-{
-  "name": "crear_presentacion",
-  "module": "document",
-  "priority": 20,
-  "regex": [
-    "^crea una presentacion llamada ([a-zA-Z0-9_-]+)$",
-    "^crear una presentacion llamada ([a-zA-Z0-9_-]+)$",
-    "^crea un powerpoint llamado ([a-zA-Z0-9_-]+)$",
-    "^crear un pptx llamado ([a-zA-Z0-9_-]+)$",
-    "^genera una presentacion llamada ([a-zA-Z0-9_-]+)$",
-    "^haz una presentacion llamada ([a-zA-Z0-9_-]+)$"
-  ],
-  "command": "create",
-  "format": "pptx",
-  "topic_group": 1
-},
-{
-  "name": "crear_documento_con_contenido",
-  "module": "document",
-  "priority": 10,
-  "regex": [
-    "^crea un (txt|docx|pdf|json|md|xlsx|pptx) llamado (.+) con el texto (.+)$"
-  ],
-  "command": "create",
-  "topic_group": 2,
-  "parameters": {
-    "format": 1,
-    "topic": 2,
-    "content": 3
-  }
 }
 
 ]

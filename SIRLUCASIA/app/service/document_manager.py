@@ -162,8 +162,10 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="create",
-                message=f"No pude crear el documento: {e}"
+                message="No pude crear el documento.",
+                error=str(e)
             )
+
 
 
         # ==================================================
@@ -187,7 +189,10 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="read",
-                message="No encontré ese documento."
+                message="No encontré ese documento.",
+                error=str(e)
+                
+                
             )
 
         try:
@@ -298,7 +303,8 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="write",
-                message=str(e)
+                message="Error al escribir en el documento.",
+                error=str(e)
             )
 
     # ==================================================
@@ -307,6 +313,7 @@ class DocumentManager:
     def delete(self, data):
         name = data.get("topic")
         filepath, extension = self._get_document(name)
+
         if filepath is None:
             return ActionResult(
                 success=False,
@@ -331,14 +338,15 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="delete",
-                message=str(e)
+                message="Error al eliminar el documento.",
+                error=str(e)
             )
+
 
     # ==================================================
     # Renombrar documento
     # ==================================================
     def rename(self, data):
-
         old_name = data.get("old_name") or data.get("topic")
         new_name = data.get("new_name")
 
@@ -353,23 +361,24 @@ class DocumentManager:
                 message="No encontré ese documento."
             )
 
-        new_path = os.path.join(
-            self.path,
-            f"{new_name}{extension}"
-        )
+        # 🔧 CAMBIO: evitar duplicar extensión
+        base, ext = os.path.splitext(new_name)
+        if ext == extension:
+            new_filename = new_name
+        else:
+            new_filename = f"{new_name}{extension}"
 
-        # 🔧 CAMBIO: Generar nombre alternativo si ya existe
+        new_path = os.path.join(self.path, new_filename)
+
+        # Generar nombre alternativo si ya existe
         counter = 1
         while os.path.exists(new_path):
-            new_path = os.path.join(
-                self.path,
-                f"{new_name}_{counter}{extension}"
-            )
+            new_filename = f"{base}_{counter}{extension}"
+            new_path = os.path.join(self.path, new_filename)
             counter += 1
 
         try:
             os.rename(filepath, new_path)
-
             return ActionResult(
                 success=True,
                 status=ActionStatus.SUCCESS,
@@ -377,15 +386,16 @@ class DocumentManager:
                 command="rename",
                 message=f"'{old_name}' fue renombrado a '{os.path.basename(new_path)}'."
             )
-
         except Exception as e:
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,
                 module="document",
                 command="rename",
-                message=str(e)
+                message="Error al renombrar el documento.",
+                error=str(e)
             )
+
 
 
 
@@ -399,6 +409,7 @@ class DocumentManager:
     def copy(self, data):
         old_name = data.get("old_name")
         new_name = data.get("new_name")
+
         filepath, extension = self._get_document(old_name)
         if filepath is None:
             return ActionResult(
@@ -409,7 +420,13 @@ class DocumentManager:
                 message="No encontré ese documento."
             )
 
-        new_path = os.path.join(self.path, f"{new_name}{extension}")
+        # 🔧 CAMBIO: asegurar que el nuevo nombre tenga extensión
+        base, ext = os.path.splitext(new_name)
+        if not ext:
+            new_name = f"{new_name}{extension}"
+
+        new_path = os.path.join(self.path, new_name)
+
         try:
             shutil.copy(filepath, new_path)
             return ActionResult(
@@ -425,8 +442,10 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="copy",
-                message=str(e)
+                message="Error al copiar el documento.",
+                error=str(e)
             )
+
 
     # ==================================================
     # Mover documento
@@ -460,7 +479,8 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="move",
-                message=str(e)
+                message="Error al mover el documento.",
+                error=str(e)
             )
     # ==================================================
     # Listar documentos
@@ -486,8 +506,9 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="list_documents",
-                message=str(e)
-           )
+                message="Error al listar los documentos.",
+                error=str(e)
+            )
 
     # ==================================================
     # Información del documento
@@ -519,8 +540,8 @@ class DocumentManager:
                     "name": os.path.basename(filepath),
                     "extension": extension,
                     "size": stat.st_size,
-                    "created": datetime.fromtimestamp(stat.st_ctime),
-                    "modified": datetime.fromtimestamp(stat.st_mtime)
+                    "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
                 }
             )
 
@@ -530,7 +551,8 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="info",
-                message=str(e)
+                message="Error al obtener la información del documento.",
+                error=str(e)
             )
 
     # ==================================================
@@ -601,7 +623,8 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="modified",
-                message=str(e)
+                message="Error al obtener la fecha de modificación.",
+                error=str(e)
             )
 
     # ==================================================

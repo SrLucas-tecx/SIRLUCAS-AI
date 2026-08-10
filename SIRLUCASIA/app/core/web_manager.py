@@ -20,7 +20,8 @@ class WebManager:
                 status=ActionStatus.ERROR,
                 module="web",
                 command=command,
-                message=f"No existe la acción '{command}'."
+                message=f"No existe la acción '{command}'.",
+                error=f"Acción '{command}' no implementada en WebManager."
             )
         return method(data)
 
@@ -32,7 +33,8 @@ class WebManager:
                 status=ActionStatus.ERROR,
                 module="web",
                 command="search",
-                message="No especificaste qué buscar."
+                message="No especificaste qué buscar.",
+                error="Campo 'topic' vacío."
             )
 
         result = self.database.find(topic)
@@ -42,7 +44,8 @@ class WebManager:
                 status=ActionStatus.ERROR,
                 module="web",
                 command="search",
-                message=f"No encontré '{topic}'."
+                message=f"No encontré '{topic}'.",
+                error=f"No se encontró búsqueda registrada para '{topic}'."
             )
 
         return ActionResult(
@@ -51,5 +54,5 @@ class WebManager:
             module="web",
             command="search",
             message=f"Búsqueda web simulada: {result}",
-            data=result
+            data={"topic": topic, "result": result}
         )

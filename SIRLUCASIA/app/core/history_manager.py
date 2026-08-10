@@ -23,7 +23,14 @@ class HistoryManager:
         command = data.get("command")
         method = getattr(self, command, None)
         if method is None:
-            return ActionResult(False, ActionStatus.ERROR, "history", command, f"No existe el comando '{command}'.")
+
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="history",
+                command=command,
+                message=f"No existe el comando '{command}'."
+            )
         return method(data)
 
     # ===============================
@@ -64,7 +71,14 @@ class HistoryManager:
         }
         self.database.data.append(record)
         self.sync()
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "add", "Registro agregado.", record)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="add",
+            message="Registro agregado.",
+            data=record
+        )
 
     # ===============================
     # Obtener historial
@@ -77,15 +91,35 @@ class HistoryManager:
         if limit:
             records = records[-limit:]
 
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "history", "Historial obtenido.", records)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="history",
+            message="Historial obtenido.",
+            data=records
+        )
 
     # ===============================
     # Último comando
     # ===============================
     def last(self, data=None):
         if not self.database.data:
-            return ActionResult(False, ActionStatus.WARNING, "history", "last", "Historial vacío.")
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "last", "Último registro.", self.database.data[-1])
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="history",
+                command="last",
+                message="Historial vacío."
+            )
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="last",
+            message="Último registro.",
+            data=self.database.data[-1]
+        )
 
     # ===============================
     # Limpiar historial
@@ -93,7 +127,13 @@ class HistoryManager:
     def clear(self, data=None):
         self.database.data.clear()
         self.sync()
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "clear", "Historial limpiado.")
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="clear",
+            message="Historial limpiado."
+        )
 
     # ===============================
     # Buscar en historial
@@ -106,30 +146,77 @@ class HistoryManager:
             or query in str(item.get("module", "")).lower()
             or query in str(item.get("topic", "")).lower()
         ]
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "search", f"{len(results)} resultados encontrados.", results)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="search",
+            message=f"{len(results)} resultados encontrados.",
+            data=results
+        )
 
     def history_by_module(self, data):
         module = data.get("module")
         if not module:
-            return ActionResult(False, ActionStatus.ERROR, "history", "history_by_module", "Módulo no especificado.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="history",
+                command="history_by_module",
+                message="Módulo no especificado."
+            )
         results = self.find_module(module)
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "history_by_module", f"{len(results)} registros para módulo {module}.", results)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="history_by_module",
+            message=f"{len(results)} registros para módulo {module}.",
+            data=results
+        )
 
     def history_by_date(self, data):
         date = data.get("date")
         if not date:
-            return ActionResult(False, ActionStatus.ERROR, "history", "history_by_date", "Fecha no especificada.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="history",
+                command="history_by_date",
+                message="Fecha no especificada."
+            )
         results = [item for item in self.database.data if item.get("timestamp", "").startswith(date)]
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "history_by_date", f"{len(results)} registros para fecha {date}.", results)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="history_by_date",
+            message=f"{len(results)} registros para fecha {date}.",
+            data=results
+        )
 
     def last_n(self, data):
         n = data.get("n", 5)
         results = self.database.data[-n:]
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "last_n", f"Últimos {n} registros.", results)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="last_n",
+            message=f"Últimos {n} registros.",
+            data=results
+        )
 
     def count(self, data=None):
         total = len(self.database.data)
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "count", f"Total: {total}", {"count": total})
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="count",
+            message=f"Total: {total}",
+            data={"count": total}
+        )
 
     # ===============================
     # Estadísticas
@@ -137,7 +224,13 @@ class HistoryManager:
     def statistics(self, data=None):
         total = len(self.database.data)
         if not total:
-            return ActionResult(False, ActionStatus.WARNING, "history", "statistics", "Historial vacío.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="history",
+                command="statistics",
+                message="Historial vacío."
+            )
 
         modules = [item["module"] for item in self.database.data if item.get("module")]
         commands = [item["command"] for item in self.database.data if item.get("command")]
@@ -155,14 +248,27 @@ class HistoryManager:
             "start_date": self.database.data[0]["timestamp"],
             "end_date": self.database.data[-1]["timestamp"]
         }
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "statistics", "Estadísticas generadas.", stats)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="statistics",
+            message="Estadísticas generadas.",
+            data=stats
+        )
 
     # ===============================
     # Resumen
     # ===============================
     def summary(self, data=None):
         if not self.database.data:
-            return ActionResult(False, ActionStatus.WARNING, "history", "summary", "Historial vacío.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="history",
+                command="summary",
+                message="Historial vacío."
+            )
 
         total = len(self.database.data)
         modules = list(set([item["module"] for item in self.database.data if item.get("module")]))
@@ -179,7 +285,14 @@ class HistoryManager:
             f"Fecha final: {self.database.data[-1]['timestamp']}"
         )
 
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "summary", "Resumen generado.", resumen)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="summary",
+            message="Resumen generado.",
+            data={"summary": resumen}
+        )
 
     # ===============================
     # Eliminar registros
@@ -187,27 +300,64 @@ class HistoryManager:
     def remove(self, data):
         idx = data.get("id")
         if not idx:
-            return ActionResult(False, ActionStatus.ERROR, "history", "remove", "ID no especificado.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="history",
+                command="remove",
+                message="ID no especificado."
+            )
         item = self.get(idx)
         if not item:
-            return ActionResult(False, ActionStatus.WARNING, "history", "remove", f"No se encontró registro {idx}.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="history",
+                command="remove",
+                message=f"No se encontró registro {idx}."
+            )
         self.database.data.remove(item)
         self.sync()
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "remove", f"Registro {idx} eliminado.")
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="remove",
+            message=f"Registro {idx} eliminado."
+        )
 
     def remove_last(self, data=None):
         if not self.database.data:
-            return ActionResult(False, ActionStatus.WARNING, "history", "remove_last", "Historial vacío.")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.WARNING,
+                module="history",
+                command="remove_last",
+                message="Historial vacío."
+            )
         item = self.database.data.pop()
         self.sync()
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "remove_last", "Último registro eliminado.", item)
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="remove_last",
+            message="Último registro eliminado.",
+            data=item
+        )
 
     # ===============================
     # Exportar / Importar / Backup
     # ===============================
     def export(self, data=None):
         JSONManager.save("data/history.json", self.database.data)
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "export", "Historial exportado.")
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="export",
+            message="Historial exportado."
+        )
 
     def import_history(self, data):
         archivo = data.get("file", "data/history.json")
@@ -216,33 +366,82 @@ class HistoryManager:
                 contenido = json.load(f)
             self.database.data = contenido
             self.sync()
-            return ActionResult(True, ActionStatus.SUCCESS, "history", "import_history", "Historial importado.", contenido)
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="history",
+                command="import_history",
+                message="Historial importado.",
+                data=contenido
+            )
         except Exception as e:
-            return ActionResult(False, ActionStatus.ERROR, "history", "import_history", f"Error al importar: {str(e)}")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="history",
+                command="import_history",
+                message=f"Error al importar: {str(e)}"
+            )
 
     def backup(self, data=None):
         JSONManager.save("data/history_backup.json", self.database.data)
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "backup", "Backup creado.")    
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="backup",
+            message="Backup creado."
+        )
 
     def restore(self, data=None):
         contenido = JSONManager.load("data/history_backup.json")
         if contenido:
             self.database.data = contenido
             self.sync()
-            return ActionResult(True, ActionStatus.SUCCESS, "history", "restore", "Historial restaurado.")
-        return ActionResult(False, ActionStatus.ERROR, "history", "restore", "No se encontró backup.")
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="history",
+                command="restore",
+                message="Historial restaurado."
+            )
+        return ActionResult(
+            success=False,
+            status=ActionStatus.ERROR,
+            module="history",
+            command="restore",
+            message="No se encontró backup."
+        )
 
     def sync(self, data=None):
         JSONManager.save("data/history.json", self.database.data)
-        return ActionResult(True, ActionStatus.SUCCESS, "history", "sync", "Historial sincronizado.")
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="history",
+            command="sync",
+            message="Historial sincronizado."
+        )
 
     def validate(self, data=None):
         try:
             with open("data/history.json", "r", encoding="utf-8") as f:
                 json.load(f)
-            return ActionResult(True, ActionStatus.SUCCESS, "history", "validate", "Archivo válido.")
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="history",
+                command="validate",
+                message="Archivo válido."
+            )
         except Exception as e:
-            return ActionResult(False, ActionStatus.ERROR, "history", "validate", f"Archivo corrupto: {str(e)}")
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="history",
+                command="validate",
+                message=f"Archivo corrupto: {str(e)}"
+            )
 
     # ===============================
     # Representación

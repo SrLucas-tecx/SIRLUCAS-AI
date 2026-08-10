@@ -39,7 +39,8 @@ class KnowledgeManager:
                 status=ActionStatus.ERROR,
                 module="knowledge",
                 command=command,
-                message=f"No existe la acción '{command}'."
+                message=f"No existe la acción '{command}'.",
+                error=f"Acción '{command}' no implementada en KnowledgeManager."
             )
 
         return method(data)
@@ -56,25 +57,25 @@ class KnowledgeManager:
         )
 
         if topic is None:
-
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,
                 module="knowledge",
                 command="search",
-                message="No especificaste qué buscar."
+                message="No especificaste qué buscar.",
+                error="Campo 'topic' vacío."
             )
 
         answer = self.database.find(topic)
 
         if answer is None:
-
             return ActionResult(
                 success=False,
                 status=ActionStatus.WARNING,
                 module="knowledge",
                 command="search",
-                message="No conozco ese tema todavía."
+                message="No conozco ese tema todavía.",
+                error=f"No se encontró conocimiento para '{topic}'."
             )
 
         return ActionResult(

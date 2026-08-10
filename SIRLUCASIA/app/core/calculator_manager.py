@@ -82,6 +82,7 @@ class CalculatorManager:
                 module="calculator",
                 command=command,
                 message="No especificaste una acción.",
+                error="El campo 'command' es obligatorio y debe ser una cadena.",
             )
 
         method = getattr(self, command, None)
@@ -93,7 +94,8 @@ class CalculatorManager:
                 module="calculator",
                 command=command,
                 message=f"No existe la acción '{command}'.",
-            )
+                error=f"Acción '{command}' no implementada en CalculatorManager.",
+            )   
 
         return method(data)
 
@@ -119,7 +121,7 @@ class CalculatorManager:
                 module="calculator",
                 command="calculate",
                 message=f"Resultado: {result}",
-                data=result,
+                data={"result": result}
             )
 
         except SyntaxError:

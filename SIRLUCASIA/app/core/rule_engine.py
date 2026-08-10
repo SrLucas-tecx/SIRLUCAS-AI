@@ -13,6 +13,7 @@ class RuleEngine:
             )
             rules = []
 
+        # Ordenar reglas por prioridad
         self.rules = sorted(
             (
                 rule
@@ -57,6 +58,9 @@ class RuleEngine:
                 if not match:
                     continue
 
+                # ===============================
+                # Resultado base
+                # ===============================
                 result = {
                     "rule": rule.get("name"),
                     "module": rule.get("module"),
@@ -64,27 +68,18 @@ class RuleEngine:
                 }
 
                 # ===============================
-                # Copiar todos los campos fijos
+                # Copiar campos fijos
                 # ===============================
                 for key, value in rule.items():
-
-                    if key in [
-                        "name",
-                        "regex",
-                        "module",
-                        "command",
-                        "priority"
-                    ]:
+                    if key in ["name", "regex", "module", "command", "priority"]:
                         continue
-
                     if not key.endswith("_group"):
                         result[key] = value
 
                 # ===============================
-                # Capturar grupos
+                # Capturar grupos dinámicos
                 # ===============================
                 for key, value in rule.items():
-
                     if not key.endswith("_group"):
                         continue
 
@@ -100,15 +95,16 @@ class RuleEngine:
 
                     if value == 0:
                         result[field] = match.group(0).strip()
-
                     elif match.lastindex and value <= match.lastindex:
                         captured = match.group(value)
-
                         if captured is not None:
                             result[field] = captured.strip()
 
+                # Guardar los grupos originales para depuración
+                result["matches"] = match.groups()
+
                 logger.debug("[RuleEngine] -> %s", result)
 
-                return result
+                return result  # ✅ Aquí devolvemos el resultado al encontrar coincidencia
 
-        return None
+        return None  # ✅ Si no hubo coincidencias, devolvemos None
