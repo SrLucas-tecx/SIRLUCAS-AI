@@ -2,8 +2,8 @@ import re
 from collections import deque
 from datetime import datetime
 
-from SIRLUCASIA.app.core.action_result import ActionResult
-from SIRLUCASIA.app.core.action_status import ActionStatus
+from app.core.action_result import ActionResult
+from app.core.action_status import ActionStatus
 from app.core.context_stack import ContextStack
 
 # ==================================================

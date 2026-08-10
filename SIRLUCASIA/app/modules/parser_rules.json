@@ -780,6 +780,25 @@
   ],
   "command": "talk",
   "topic_group": 1
+},
+{
+  "name": "conversacion_saludo_nombre",
+  "module": "conversation",
+  "priority": 1,
+  "regex": [
+    "^(hola(\\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*)$",
+    "^(holaa+(\\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*)$",
+    "^(holi(s)?(\\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*)$",
+    "^(ola(\\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*)$",
+    "^(hello(\\s+[a-zA-Z]+)*)$",
+    "^(hi(\\s+[a-zA-Z]+)*)$",
+    "^(hey(\\s+[a-zA-Z]+)*)$",
+    "^(buenas(\\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*)$",
+    "^(que onda|qué onda)(\\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*$",
+    "^(que tal|qué tal)(\\s+[a-zA-ZáéíóúÁÉÍÓÚñÑ]+)*$"
+  ],
+  "command": "talk",
+  "topic_group": 1
 }
 
 ]

@@ -9,19 +9,17 @@ class Normalizer:
         # ==================================================
         # Palabras de ruido
         # ==================================================
-
         self.noise_words = [
             "por favor",
             "quisiera",
             "me gustaria",
             "si puedes",
-            "podrias"
+            "podrias",
         ]
 
         # ==================================================
         # Verbos
         # ==================================================
-
         self.verb_map = {
             "abre": "abrir",
             "abriras": "abrir",
@@ -33,127 +31,165 @@ class Normalizer:
         # ==================================================
         # Aplicaciones conocidas
         # ==================================================
-
         self.app_map = {
             "google chrome": "chrome",
             "navegador": "chrome",
             "ms word": "word",
             "excel": "excel",
             "hojas de calculo": "excel",
+            "calculadora": "calculadora",
         }
+
+        # ==================================================
+        # Formas de invocar a SIRLUCAS
+        # ==================================================
+        self.invocation_patterns = [
+            r"^hola oye lucas\b",
+            r"^oye lucas\b",
+            r"^hola lucas\b",
+            r"^hey lucas\b",
+            r"^lucas\b",
+        ]
 
     # ==================================================
     # NORMALIZE
     # ==================================================
-
     def normalize(self, text: str) -> str:
 
         if not isinstance(text, str):
             return ""
 
-        # Limpiar espacios
-        text = text.strip()
+        # --------------------------------------------------
+        # Limpieza básica
+        # --------------------------------------------------
+        text = text.strip().lower()
 
-        # Minúsculas
-        text = text.lower()
-
+        # --------------------------------------------------
         # Eliminar acentos
+        # --------------------------------------------------
         text = "".join(
-            c
-            for c in unicodedata.normalize("NFD", text)
+            c for c in unicodedata.normalize("NFD", text)
             if unicodedata.category(c) != "Mn"
         )
 
-        # Eliminar signos de puntuación
-        #
-        # IMPORTANTE:
-        # NO eliminamos "." porque los documentos pueden
-        # contener extensiones como demo.txt
-        #
-        text = re.sub(
-            r"[¿?¡!;,:\(\)\"']",
-            "",
-            text
-        )
+        # --------------------------------------------------
+        # Eliminar signos de puntuación (excepto ".")
+        # --------------------------------------------------
+        text = re.sub(r"[¿?¡!;,:\(\)\"']", "", text)
 
+        # --------------------------------------------------
         # Normalizar espacios
-        text = re.sub(r"\s+", " ", text)
+        # --------------------------------------------------
+        text = re.sub(r"\s+", " ", text).strip()
 
+        # --------------------------------------------------
+        # Eliminar invocación a Lucas
+        # --------------------------------------------------
+        text = self.remove_invocation(text)
+
+        # --------------------------------------------------
+        # Si era únicamente un saludo/invocación, conservarlo
+        # --------------------------------------------------
+        if self.is_invocation_only(text):
+            print(f"[Normalizer] -> {text}")
+            return text
+
+        # --------------------------------------------------
         # Eliminar palabras de ruido
+        # --------------------------------------------------
         text = self.remove_noise(text)
 
+        # --------------------------------------------------
         # Normalizar verbos
+        # --------------------------------------------------
         text = self.normalize_verbs(text)
 
-        # Normalizar aplicaciones únicamente
-        # cuando corresponde
+        # --------------------------------------------------
+        # Normalizar aplicaciones
+        # --------------------------------------------------
         text = self.normalize_apps(text)
 
-        text = text.strip()
+        # --------------------------------------------------
+        # Limpieza final
+        # --------------------------------------------------
+        text = re.sub(r"\s+", " ", text).strip()
 
         print(f"[Normalizer] -> {text}")
+        return text
+
+    # ==================================================
+    # REMOVE INVOCATION
+    # ==================================================
+    def remove_invocation(self, text: str) -> str:
+
+        if not text:
+            return text
+
+        for pattern in self.invocation_patterns:
+            match = re.match(pattern, text)
+            if not match:
+                continue
+
+            remaining = text[match.end():].strip()
+
+            # Si no hay nada después, conservar la invocación
+            if not remaining:
+                return text
+
+            # Si hay orden, devolver solo la orden
+            return remaining
 
         return text
 
     # ==================================================
+    # IS INVOCATION ONLY
+    # ==================================================
+    def is_invocation_only(self, text: str) -> bool:
+
+        if not text:
+            return False
+
+        for pattern in self.invocation_patterns:
+            if re.fullmatch(pattern, text):
+                return True
+
+        return False
+
+    # ==================================================
     # REMOVE NOISE
     # ==================================================
-
     def remove_noise(self, text: str) -> str:
 
         for word in self.noise_words:
-            text = text.replace(word, "")
+            text = re.sub(rf"\b{re.escape(word)}\b", "", text)
 
-        # Volver a limpiar espacios
         text = re.sub(r"\s+", " ", text)
-
         return text.strip()
 
     # ==================================================
     # NORMALIZE VERBS
     # ==================================================
-
     def normalize_verbs(self, text: str) -> str:
 
         for original, normalized in self.verb_map.items():
-
-            # \b evita reemplazos dentro de otras palabras
-            text = re.sub(
-                rf"\b{re.escape(original)}\b",
-                normalized,
-                text
-            )
+            text = re.sub(rf"\b{re.escape(original)}\b", normalized, text)
 
         return text
 
     # ==================================================
     # NORMALIZE APPS
     # ==================================================
-
     def normalize_apps(self, text: str) -> str:
 
         words = text.split()
-
         if not words:
             return text
 
         first_word = words[0]
 
-        # Solo normalizamos aplicaciones cuando
-        # realmente estamos hablando de abrir/iniciar/ejecutar
-        if first_word in {
-            "abrir",
-            "iniciar",
-            "inicia",
-            "ejecutar",
-        }:
-
+        # Solo normalizar apps si es orden de ejecución
+        if first_word in {"abrir", "iniciar", "inicia", "ejecutar"}:
             for original, normalized in self.app_map.items():
-
-                text = re.sub(
-                    rf"\b{re.escape(original)}\b",
-                    normalized,
-                    text
-                )
+                text = re.sub(rf"\b{re.escape(original)}\b", normalized, text)
 
         return text
