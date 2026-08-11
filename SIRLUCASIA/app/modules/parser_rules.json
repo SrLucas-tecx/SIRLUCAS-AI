@@ -799,6 +799,36 @@
   ],
   "command": "talk",
   "topic_group": 1
-}
+},
+{
+  "name": "conversacion_saludo_nombre",
+  "module": "memory",
+  "priority": 1,
+  "regex": [
+    "^(hola\\s+([a-zA-ZáéíóúÁÉÍÓÚñÑ]+))$",
+    "^(holaa+\\s+([a-zA-ZáéíóúÁÉÍÓÚñÑ]+))$",
+    "^(holi(s)?\\s+([a-zA-ZáéíóúÁÉÍÓÚñÑ]+))$",
+    "^(hello\\s+([a-zA-Z]+))$",
+    "^(hi\\s+([a-zA-Z]+))$",
+    "^(hey\\s+([a-zA-Z]+))$"
+  ],
+  "command": "remember",
+  "key": "nombre",
+  "value_group": 2,
+  "category": "personal"
+},
+{
+    "rule": "reiniciar_generico",
+    "module": "system",
+    "command": "restart",
+    "pattern": "reiniciar"
+  },
+  {
+    "rule": "estado_generico",
+    "module": "system",
+    "command": "is_open",
+    "pattern": "esta abierto"
+  }
+
 
 ]

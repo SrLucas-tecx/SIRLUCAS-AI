@@ -51,6 +51,24 @@ class ProgramDatabase(BaseDatabase):
             "opera": "opera.exe",
             "opera gx": "opera.exe",
         }
+                # Office
+                # Office con rutas absolutas
+        self.data.update({
+            "word": r"C:\Program Files\Microsoft Office\Office16\WINWORD.EXE",
+            "microsoft word": r"C:\Program Files\Microsoft Office\Office16\WINWORD.EXE",
+
+            "excel": r"C:\Program Files\Microsoft Office\Office16\EXCEL.EXE",
+            "microsoft excel": r"C:\Program Files\Microsoft Office\Office16\EXCEL.EXE",
+
+            "powerpoint": r"C:\Program Files\Microsoft Office\Office16\POWERPNT.EXE",
+            "microsoft powerpoint": r"C:\Program Files\Microsoft Office\Office16\POWERPNT.EXE",
+        })
+
+        self.data.update({
+        "opera gx": r"C:\Users\Juan\AppData\Local\Programs\Opera GX\opera.exe",
+        "opera": r"C:\Users\Juan\AppData\Local\Programs\Opera GX\opera.exe",
+    })
+
 
     def find(self, name):
         if not name:

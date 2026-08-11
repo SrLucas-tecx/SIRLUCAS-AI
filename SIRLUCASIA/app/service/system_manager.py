@@ -17,7 +17,7 @@ detalles de sincronización ni de la estructura de datos interna.
 """
 
 from __future__ import annotations
-
+import os
 import logging
 import subprocess
 import threading
@@ -191,32 +191,37 @@ class SystemManager:
             "open", f"Abriendo {app}...", data={"program": app, "pid": popen.pid}
         )
 
-    # ==================================================
-    # Cerrar aplicación
-    # ==================================================
-    def close(self, data: dict) -> ActionResult:
-        """
-        Cierra la aplicación indicada en `data['topic']`.
+    def _close_by_name(self, app: str, program: str) -> ActionResult:
+        candidates = [os.path.basename(program)]
 
-        Si el asistente tiene procesos rastreados de esa aplicación
-        (abiertos por `open()`), cierra únicamente esos, por PID,
-        esperando confirmación real de terminación. Si no hay ningún
-        proceso rastreado (por ejemplo, la app fue abierta manualmente
-        por el usuario), recurre a `taskkill /IM` como mecanismo de
-        respaldo.
-        """
-        app = data.get("topic")
-        if not app:
-            return self._error("close", "No especificaste qué aplicación cerrar.")
+        # Caso especial: calculadora moderna de Windows
+        if candidates[0].lower() == "calc.exe":
+            candidates.append("Calculator.exe")
+            candidates.append("ApplicationFrameHost.exe")
 
-        program = self.database.find(app)
-        if program is None:
-            return self._error("close", f"No conozco la aplicación '{app}'.")
+        last_error = None
 
-        tracked = self._registry.alive_for(program)
-        if tracked:
-            return self._close_tracked(app, program, tracked)
-        return self._close_by_name(app, program)
+        for candidate in candidates:
+            try:
+                result = subprocess.run(
+                    ["taskkill", "/IM", candidate, "/F"],
+                    capture_output=True,
+                    text=True,
+                    timeout=SUBPROCESS_TIMEOUT_SECONDS,
+                )
+                if result.returncode == 0:
+                    return self._success("close", f"{app} cerrado correctamente.")
+                else:
+                    last_error = (result.stderr or "").strip()
+                    logger.warning("taskkill no pudo cerrar '%s' (%s): %s", app, candidate, last_error)
+            except subprocess.TimeoutExpired:
+                logger.warning("taskkill no respondió a tiempo cerrando '%s' (%s).", app, candidate)
+                last_error = "taskkill timeout"
+            except Exception as e:
+                logger.exception("Error inesperado ejecutando taskkill para '%s' (%s).", app, candidate)
+                last_error = str(e)
+
+        return self._error("close", f"No pude cerrar {app}.", error=last_error or "Ningún candidato respondió")
 
     def _close_tracked(
         self, app: str, program: str, tracked: list[TrackedProcess]
@@ -366,7 +371,7 @@ class SystemManager:
 
         program = self.database.find(app)
         if program is None:
-            return False
+            return self ._error("open", f"No conozco la aplicación '{app}'.")
 
         # Atajo: si ya tenemos un proceso rastreado y vivo para este ejecutable
         if self._registry.alive_for(program):
