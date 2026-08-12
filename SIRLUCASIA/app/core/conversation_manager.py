@@ -64,6 +64,9 @@ from app.core.memory_manager import MemoryManager
 from app.core.knowledge_manager import KnowledgeManager
 from app.core.context_manager import ContextManager
 from app.core.task_executor import TaskExecutor
+from app.service.system_manager import SystemManager
+
+system_manager = SystemManager()
 
 logger = logging.getLogger(__name__)
 
@@ -290,12 +293,6 @@ class ConversationManager:
         return None
 
     def _resolve_response(self, message: str, context: dict, memory_hits: Any, raw_data: dict) -> Any:
-        """
-        Decide, de forma puramente orquestadora, a quién le corresponde
-        resolver el mensaje: si trae un `command`/`task` explícito se
-        delega en TaskExecutor; si no, primero intenta responder con los
-        JSON de intents/responses; si no, se consulta a KnowledgeManager.
-        """
         intent_tag = raw_data.get("rule") or raw_data.get("tag")
 
         # Buscar en responses.json
@@ -309,9 +306,14 @@ class ConversationManager:
                     return random.choice(intent["responses"])
 
         # Si hay comando/tarea explícito
-        if raw_data.get("command") or raw_data.get("task"):
-            task_payload = {**raw_data, "context": context, "memory": memory_hits}
-            return self._run_task(task_payload)
+        if raw_data.get("command"):
+            if raw_data.get("module") == "system":   # 🔧 CORREGIDO: delegar directamente en SystemManager
+                from app.service.system_manager import SystemManager
+                system_manager = SystemManager()
+                return system_manager.execute(raw_data)
+            else:
+                task_payload = {**raw_data, "context": context, "memory": memory_hits}
+                return self._run_task(task_payload)
 
         # Fallback: KnowledgeManager
         return self._consult_knowledge(message, {"context": context, "memory": memory_hits})

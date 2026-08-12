@@ -817,18 +817,42 @@
   "value_group": 2,
   "category": "personal"
 },
-{
+[
+  {
+    "rule": "abrir_app",
+    "module": "system",
+    "command": "open",
+    "regex": ["^abrir (.+)$", "^abre (.+)$", "^ejecuta (.+)$", "^inicia (.+)$"],
+    "topic_group": 1
+  },
+  {
+    "rule": "cerrar_generico",
+    "module": "system",
+    "command": "close",
+    "regex": ["^cerrar$", "^cierra$", "^cierralo$", "^ciérralo$", "^cierrala$", "^ciérrala$"],
+    "topic": "lo"
+  },
+  {
     "rule": "reiniciar_generico",
     "module": "system",
     "command": "restart",
-    "pattern": "reiniciar"
+    "regex": ["^reiniciar (.+)$", "^reinicia (.+)$", "^reinicialo$", "^reinícialo$", "^reiniciala$", "^reiníciala$"],
+    "topic_group": 1
   },
   {
     "rule": "estado_generico",
     "module": "system",
     "command": "is_open",
-    "pattern": "esta abierto"
+    "regex": ["^esta abierto (.+)$", "^está abierto (.+)$"],
+    "topic_group": 1
+  },
+  {
+    "rule": "estado_como_generico",
+    "module": "system",
+    "command": "is_open",
+    "regex": ["^como esta (.+)$", "^cómo está (.+)$"],
+    "topic_group": 1
   }
-
+]
 
 ]

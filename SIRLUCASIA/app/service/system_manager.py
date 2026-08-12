@@ -51,6 +51,8 @@ class SystemCommand(StrEnum):
     OPEN = "open"
     CLOSE = "close"
     RESTART = "restart"
+    IS_OPEN = "is_open"
+    
 
 
 @dataclass(slots=True)
@@ -297,45 +299,6 @@ class SystemManager:
             )
             return False
 
-    def _close_by_name(self, app: str, program: str) -> ActionResult:
-        """
-        Respaldo: cierra por nombre de ejecutable vía `taskkill /IM`.
-        Se usa solo cuando no hay procesos rastreados por el asistente
-        para esa aplicación.
-        """
-        # Lista de candidatos: el nombre original y variantes conocidas
-        candidates = [program]
-
-        # Caso especial: calculadora moderna de Windows
-        if program.lower() == "calc.exe":
-            candidates.append("Calculator.exe")
-            candidates.append("ApplicationFrameHost.exe")
-
-        last_error = None
-
-        for candidate in candidates:
-            try:
-                result = subprocess.run(
-                    ["taskkill", "/IM", candidate, "/F"],
-                    capture_output=True,
-                    text=True,
-                    timeout=SUBPROCESS_TIMEOUT_SECONDS,
-                )
-                if result.returncode == 0:
-                    return self._success("close", f"{app} cerrado correctamente.")
-                else:
-                    last_error = (result.stderr or "").strip()
-                    logger.warning("taskkill no pudo cerrar '%s' (%s): %s", app, candidate, last_error)
-            except subprocess.TimeoutExpired:
-                logger.warning("taskkill no respondió a tiempo cerrando '%s' (%s).", app, candidate)
-                last_error = "taskkill timeout"
-            except Exception as e:
-                logger.exception("Error inesperado ejecutando taskkill para '%s' (%s).", app, candidate)
-                last_error = str(e)
-
-        # Si ninguno de los candidatos funcionó
-        return self._error("close", f"No pude cerrar {app}.", error=last_error or "Ningún candidato respondió")
-
 
     # ==================================================
     # Reiniciar aplicación
@@ -352,7 +315,7 @@ class SystemManager:
         if not app:
             return self._error("restart", "No especificaste qué aplicación reiniciar.")
 
-        if not self.is_open(app):
+        if not self._is_open_bool(app):
             return self.open(data)
 
         close_result = self.close(data)
@@ -364,20 +327,18 @@ class SystemManager:
     # ==================================================
     # Verificar si está abierto
     # ==================================================
-    def is_open(self, app: str) -> bool:
-        """True si hay al menos un proceso de `app` corriendo en el sistema."""
+    def _is_open_bool(self, app: str) -> bool:
+        """Helper interno que devuelve True/False si la app está abierta."""
         if not app:
             return False
 
         program = self.database.find(app)
         if program is None:
-            return self ._error("open", f"No conozco la aplicación '{app}'.")
+            return False
 
-        # Atajo: si ya tenemos un proceso rastreado y vivo para este ejecutable
         if self._registry.alive_for(program):
             return True
 
-        # Lista de candidatos para verificación
         candidates = [program]
         if program.lower() == "calc.exe":
             candidates.append("Calculator.exe")
@@ -394,12 +355,20 @@ class SystemManager:
                 if candidate.lower() in result.stdout.lower():
                     return True
             return False
-        except subprocess.TimeoutExpired:
-            logger.warning("tasklist no respondió a tiempo consultando '%s'.", program)
-            return False
         except Exception:
-            logger.exception("No se pudo consultar tasklist para '%s'.", program)
             return False
+
+
+    def is_open(self, data: dict) -> ActionResult:   # 🔧 CORREGIDO: ahora devuelve ActionResult
+        app = data.get("topic")
+        if not app:
+            return self._error("is_open", "No especificaste qué aplicación consultar.")
+
+        if self._is_open_bool(app):
+            return self._success("is_open", f"{app} está abierto.")
+        else:
+            return self._success("is_open", f"{app} no está abierto.")
+
 
     # ==================================================
     # Helpers de construcción de ActionResult (DRY)
@@ -425,3 +394,18 @@ class SystemManager:
             message=message,
             error=error,
         )
+    def close(self, data: dict) -> ActionResult:
+        app = data.get("topic")
+        if not app:
+            return self._error("close", "No especificaste qué aplicación cerrar.")
+
+        program = self.database.find(app)
+        if program is None:
+            return self._error("close", f"No conozco la aplicación '{app}'.")
+
+        tracked = self._registry.alive_for(program)
+        if tracked:
+            return self._close_tracked(app, program, tracked)
+        return self._close_by_name(app, program)
+
+    
