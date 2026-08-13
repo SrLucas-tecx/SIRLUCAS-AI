@@ -6,7 +6,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 class OllamaClient:
-    def __init__(self, base_url="http://localhost:11434", model="llama3", timeout=30):
+    def __init__(self, base_url="http://localhost:11434", model="llama3", timeout=50000000):
         self.base_url = base_url
         self.model = model
         self.timeout = timeout
@@ -20,30 +20,43 @@ class OllamaClient:
             logging.error(f"Ollama no disponible: {e}")
             return False
 
-    def generate(self, prompt, context=None):
+    def generate(self, prompt):
         """
-        Envía un prompt a Ollama y recibe la respuesta.
-        - prompt: texto del usuario
-        - context: opcional, diccionario con info relevante
+        Envía un prompt a Ollama y devuelve la respuesta completa.
         """
+
         payload = {
             "model": self.model,
             "prompt": prompt,
+            "stream": False
         }
-        if context:
-            payload["context"] = context
 
         try:
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
                 timeout=self.timeout
+
             )
+
             response.raise_for_status()
-            return response.json().get("response", "")
+
+            data = response.json()
+
+            return data.get("response", "").strip()
+
         except requests.exceptions.Timeout:
             logging.error("Timeout al conectar con Ollama")
             return "⚠️ Tiempo de espera agotado."
+
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error HTTP en Ollama: {e}")
+            return "⚠️ Error de comunicación con Ollama."
+
+        except ValueError as e:
+            logging.error(f"Respuesta JSON inválida de Ollama: {e}")
+            return "⚠️ Ollama devolvió una respuesta inválida."
+
         except Exception as e:
             logging.error(f"Error en OllamaClient: {e}")
             return "⚠️ Error al comunicarse con Ollama."
