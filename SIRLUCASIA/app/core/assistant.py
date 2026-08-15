@@ -10,7 +10,6 @@ from app.service.system_manager import SystemManager
 from app.service.document_manager import DocumentManager
 from app.core.router import Router
 from app.core.task_pipeline import TaskPipeline
-from app.core.response_formatter import ResponseFormatter
 from app.core.entity_resolver import EntityResolver
 from app.resolvers import ReferenceResolver
 from app.core.context_resolver import ContextResolver
@@ -23,6 +22,8 @@ from app.core.logger_listener import LoggerListener
 from app.listeners.metrics_listener import MetricsListener
 from app.listeners.history_listener import HistoryListener
 from app.listeners.ai_listener import AIListener
+from app.IA.ai_router import AIRouter
+from app.IA.context_builder import ContextBuilder   # ✅ integración
 
 
 class Assistant:
@@ -54,7 +55,7 @@ class Assistant:
         self.router.register("history", self.history)
         self.router.register("conversation", self.conversation)
 
-        # EventBus + Listeners (instancias persistentes)
+        # EventBus + Listeners
         self.event_bus = EventBus()
         self.logger_listener = LoggerListener()
         self.metrics_listener = MetricsListener()
@@ -66,7 +67,7 @@ class Assistant:
         self.event_bus.subscribe("action.executed", self.history_listener.handle)
         self.event_bus.subscribe("action.executed", self.ai_listener.handle)
 
-        # Componentes del Pipeline
+        # Pipeline
         self.entity_resolver = EntityResolver()
         self.reference_resolver = ReferenceResolver(self.context)
         self.context_resolver = ContextResolver()
@@ -75,7 +76,6 @@ class Assistant:
         self.action_optimizer = ActionOptimizer()
         self.task_executor = TaskExecutor(self.router, self.event_bus)
 
-        # Pipeline y Formatter
         self.pipeline = TaskPipeline(
             entity_resolver=self.entity_resolver,
             reference_resolver=self.reference_resolver,
@@ -86,10 +86,14 @@ class Assistant:
             optimizer=self.action_optimizer,
             executor=self.task_executor
         )
-        self.response_formatter = ResponseFormatter()
 
-        # Parser
+        # ✅ ResponseWrapper para unificar respuestas
+       
+
+        # Parser + AI Router + ContextBuilder
         self.parser = Parser()
+        self.ai_router = AIRouter()
+        self.context_builder = ContextBuilder()
 
     def start(self):
         self.show_banner()
@@ -117,12 +121,18 @@ class Assistant:
 
             # 🔑 Flujo simplificado
             message = self.parser.parse(raw_message, self.context)
-            result = self.pipeline.execute(message)
-            response = self.response_formatter.format(result)
+
+            if message.get("rule") == "unknown":
+                # ✅ construir contexto filtrado con ContextBuilder
+                context = self.context_builder.build(self.context)
+                result = self.ai_router.handle(raw_message, context=context)
+                response = self.response_wrapper.wrap(result.get("response"), source="ollama")
+            else:
+                result = self.pipeline.execute(message)
+                response = self.response_wrapper.wrap(result, source="deterministic")
 
             print(f"\n{self.name} > {response}")
 
-            # Ejemplo: mostrar métricas en debug
             if self.debug:
                 print("[Metrics]", self.metrics_listener.summary())
 
