@@ -1,29 +1,36 @@
-# app/ai/ollama_client.py
-
-import requests
 import logging
+import requests
 
-logging.basicConfig(level=logging.INFO)
 
 class OllamaClient:
-    def __init__(self, base_url="http://localhost:11434", model="llama3", timeout=50000000):
-        self.base_url = base_url
+
+    def __init__(
+        self,
+        base_url="http://localhost:11434",
+        model="llama3:latest",
+        timeout=120
+    ):
+        self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
 
     def is_available(self):
-        """Verifica si Ollama está corriendo."""
+        """Comprueba si el servidor de Ollama está disponible."""
+
         try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=self.timeout)
+            response = requests.get(
+                f"{self.base_url}/api/tags",
+                timeout=5
+            )
+
             return response.status_code == 200
-        except Exception as e:
+
+        except requests.exceptions.RequestException as e:
             logging.error(f"Ollama no disponible: {e}")
             return False
 
     def generate(self, prompt):
-        """
-        Envía un prompt a Ollama y devuelve la respuesta completa.
-        """
+        """Envía un prompt a Ollama y devuelve la respuesta."""
 
         payload = {
             "model": self.model,
@@ -32,11 +39,11 @@ class OllamaClient:
         }
 
         try:
+
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
                 timeout=self.timeout
-
             )
 
             response.raise_for_status()
@@ -46,8 +53,12 @@ class OllamaClient:
             return data.get("response", "").strip()
 
         except requests.exceptions.Timeout:
-            logging.error("Timeout al conectar con Ollama")
-            return "⚠️ Tiempo de espera agotado."
+            logging.error("Timeout al generar respuesta con Ollama")
+            return "⚠️ Ollama tardó demasiado en responder."
+
+        except requests.exceptions.ConnectionError:
+            logging.error("No se pudo conectar con Ollama")
+            return "⚠️ No se pudo conectar con Ollama."
 
         except requests.exceptions.RequestException as e:
             logging.error(f"Error HTTP en Ollama: {e}")

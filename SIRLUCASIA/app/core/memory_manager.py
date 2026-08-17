@@ -27,13 +27,14 @@ Organización del archivo
 Optimización de escritura (dirty flag)
 ----------------------------------------
 Las operaciones estructurales (remember/update/forget/rename/...) siguen
-persistiendo en disco de inmediato, igual que en la versión anterior, para
-no cambiar el comportamiento observable. Sin embargo, el bookkeeping
-interno que antes escribía en cada `recall()` (contador de uso, último
-acceso) ya NO golpea el disco en cada lectura: solo marca la memoria como
-"dirty" (`mark_dirty()`), y el volcado real ocurre en `save()`, `sync()`,
-`export()` o `autosave()`. Esto elimina la mayor fuente de I/O redundante
-del diseño original, que escribía `memory.json` completo en cada consulta.
+persistiendo en disco de inmediato por defecto (autosave_enabled=True),
+igual que en la versión anterior, para no cambiar el comportamiento
+observable. Si se instancia con `autosave_enabled=False`, esas mismas
+operaciones dejan de forzar la escritura inmediata: solo marcan la
+memoria como "dirty" (`mark_dirty()`) y el volcado real ocurre en
+`save()`, `sync()`, `export()` o `autosave()`. El bookkeeping de lectura
+(`recall()`: contador de uso, último acceso) NUNCA golpea el disco de
+inmediato, sin importar `autosave_enabled`: solo marca "dirty".
 
 Índices internos (categoría / etiquetas)
 ------------------------------------------
@@ -43,9 +44,9 @@ llamada. Se mantienen dos índices invertidos en memoria,
 `self._category_index` y `self._tag_index` (dict[str, set[str]]), que se
 actualizan de forma incremental en cada punto de mutación (remember,
 update, forget, rename, duplicate, merge, clear, clear_category, restore,
-import_memories, from_dict, set). El resultado observable es idéntico al
-de antes (mismas claves, mismo contenido); solo cambia la complejidad de
-lectura, de O(n) a O(1)/O(k) según el tamaño del resultado.
+import_memories, from_dict, set). Las etiquetas (y los aliases) se
+normalizan a minúsculas al crear el registro, así `find_by_tag("Project")`
+y `find_by_tag("project")` encuentran lo mismo.
 
 Concurrencia
 -------------
@@ -75,7 +76,10 @@ aquí, solo se dejan preparadas):
       reales (ver `search_semantic`, que ya actúa como "seam" para eso)
       en vez de la heurística de substring + importancia + uso. El
       cálculo de score es la única pieza a reemplazar; la firma pública
-      no cambiaría.
+      no cambiaría. IMPORTANTE: `search_semantic()` hoy es un alias de
+      `search_text()` (substring matching). NO hay embeddings ni base de
+      datos vectorial todavía; se deja como interfaz preparada para
+      integrarse con Ollama en el futuro.
     - `_read_storage` / `_write_storage` migrando a SQLite/Postgres/Mongo
       permitirían mover los índices de categoría/tags a consultas nativas
       (WHERE category = ?), eliminando la necesidad de mantenerlos a mano
@@ -105,15 +109,92 @@ MIN_IMPORTANCE = 1
 MAX_IMPORTANCE = 5
 DEFAULT_IMPORTANCE = 2
 DEFAULT_FIND_LIMIT = 5
+DEFAULT_RELEVANT_MEMORY_LIMIT = 5
+
+# Máximo de memorias de categoría 'conversation' (turnos) que se
+# conservan. Evita que memory.json crezca sin límite y que
+# get_relevant_memory() se llene de ruido con cada turno de charla.
+MAX_CONVERSATION_TURNS = 50
 
 
 class MemoryManager:
     """Administrador de memoria a largo plazo de SIRLUCAS AI."""
 
+    # Comandos permitidos a través de execute()/dispatcher. Restringe la
+    # superficie invocable por nombre de comando a los métodos que siguen
+    # el contrato `method(data: dict) -> ActionResult`. Métodos como
+    # get/exists/set/resolve_alias usan otra firma (argumentos
+    # posicionales) y se llaman directamente en Python, no vía execute().
+    COMMANDS = {
+        "remember",
+        "update",
+        "forget",
+        "remove",
+        "recall",
+        "search",
+        "search_text",
+        "search_semantic",
+        "find_by_category",
+        "find_by_tag",
+        "find_by_alias",
+        "find_by_importance",
+        "find_recent",
+        "find_old",
+        "find_unused",
+        "statistics",
+        "summary",
+        "count",
+        "most_used",
+        "least_used",
+        "categories",
+        "tags",
+        "memory_size",
+        "get_context",
+        "rank_memories",
+        "suggest_memories",
+        "consult",
+        "remember_turn",
+        "find_similar",
+        "get_relevant_memory",
+        "autosave",
+        "save",
+        "backup",
+        "restore",
+        "sync",
+        "validate",
+        "export",
+        "import_memories",
+        "clear",
+        "clear_category",
+        "rename",
+        "duplicate",
+        "merge",
+        "remember_fact",
+        "remember_project",
+        "get_project",
+        "set_autosave",
+        "autosave_status",
+    }
+
     # ==================================================
     # 2. INICIALIZACIÓN
     # ==================================================
     def __init__(self, autosave_enabled: bool = True) -> None:
+        """
+        Inicializa el administrador de memoria.
+
+        autosave_enabled:
+            True  -> las operaciones estructurales se guardan inmediatamente.
+            False -> las operaciones estructurales solo marcan la memoria
+                     como dirty y el guardado se realiza mediante save(),
+                     sync(), autosave() o export().
+        """
+        # Lock de reentrancia: protege las operaciones estructurales y el
+        # volcado a disco frente a acceso concurrente desde varios hilos.
+        self._lock = threading.RLock()
+
+        self.autosave_enabled = bool(autosave_enabled)
+
         raw_memory = self._read_storage(MEMORY_PATH)
 
         self.memory: dict[str, dict] = {}
@@ -122,12 +203,7 @@ class MemoryManager:
                 self.memory[self._normalize(key)] = self._normalize_record(record)
 
         self._dirty: bool = False
-        self.autosave_enabled = autosave_enabled
         self._last_saved_at: str | None = None
-
-        # Lock de reentrancia: protege las operaciones estructurales y el
-        # volcado a disco frente a acceso concurrente desde varios hilos.
-        self._lock = threading.RLock()
 
         # Índices invertidos categoría -> {claves} y etiqueta -> {claves},
         # reconstruidos a partir de lo cargado desde disco.
@@ -142,29 +218,37 @@ class MemoryManager:
         """
         Punto de entrada uniforme usado por el resto de SIRLUCAS AI
         (Router/TaskExecutor). Nunca lanza excepciones: cualquier fallo
-        se envuelve en un ActionResult de error.
+        se envuelve en un ActionResult de error. Solo permite ejecutar
+        comandos explícitamente registrados en `COMMANDS`.
         """
         command = data.get("command") if isinstance(data, dict) else None
 
         if not command:
             return ActionResult(
-                success=False, 
-                status=ActionStatus.ERROR, 
-                module="memory", 
-                command=command, 
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command=command,
                 message="No se especificó un comando."
             )
 
-        method = getattr(self, command, None)
-        if method is None or not callable(method) or command.startswith("_"):
+        if command not in self.COMMANDS:
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,
                 module="memory",
                 command=command,
                 message=f"No existe el comando '{command}'."
+            )
 
-
+        method = getattr(self, command, None)
+        if not callable(method):
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command=command,
+                message=f"El comando '{command}' no es ejecutable."
             )
 
         try:
@@ -241,8 +325,7 @@ class MemoryManager:
 
             self.memory[key] = record
             self._index_add(key, record)
-            self.mark_dirty()
-            self.save(force=True)
+            self._persist()
 
         return ActionResult(
             success=True,
@@ -293,8 +376,7 @@ class MemoryManager:
                 record["importance"] = self._clamp_importance(data["importance"])
 
             self._index_add(key, record)
-            self.mark_dirty()
-            self.save(force=True)
+            self._persist()
 
         return ActionResult(
             success=True,
@@ -331,8 +413,7 @@ class MemoryManager:
 
             record = self.memory.pop(key)
             self._index_remove(key, record)
-            self.mark_dirty()
-            self.save(force=True)
+            self._persist()
 
         return ActionResult(
             success=True,
@@ -369,8 +450,7 @@ class MemoryManager:
                 self._index_remove(key, existing)
             self.memory[key] = record
             self._index_add(key, record)
-            self.mark_dirty()
-            self.save(force=True)
+            self._persist()
         return record
 
     def clear(self, data: dict | None = None) -> ActionResult:
@@ -380,8 +460,7 @@ class MemoryManager:
             self.memory.clear()
             self._category_index.clear()
             self._tag_index.clear()
-            self.mark_dirty()
-            self.save(force=True)
+            self._persist()
         return ActionResult(
             success=True,
             status=ActionStatus.SUCCESS,
@@ -404,8 +483,7 @@ class MemoryManager:
                     self._index_remove(key, record)
 
             if keys:
-                self.mark_dirty()
-                self.save(force=True)
+                self._persist()
 
         status = ActionStatus.SUCCESS if keys else ActionStatus.WARNING
         message = (
@@ -472,8 +550,7 @@ class MemoryManager:
             self.memory[new_key] = record
             self._index_add(new_key, record)
 
-            self.mark_dirty()
-            self.save(force=True)
+            self._persist()
 
         return ActionResult(
             success=True,
@@ -526,8 +603,7 @@ class MemoryManager:
 
             self.memory[target_key] = record
             self._index_add(target_key, record)
-            self.mark_dirty()
-            self.save(force=True)
+            self._persist()
 
         return ActionResult(
             success=True,
@@ -590,8 +666,7 @@ class MemoryManager:
                     if old is not None:
                         self._index_remove(key, old)
 
-            self.mark_dirty()
-            self.save(force=True)
+            self._persist()
 
         return ActionResult(
             success=True,
@@ -619,19 +694,22 @@ class MemoryManager:
                 message="No especificaste qué recordar."
             )
 
-        record = self.memory.get(key)
-        if record is None:
-            return ActionResult(
-                success=False,
-                status=ActionStatus.WARNING,
-                module="memory",
-                command="recall",
-                message=f"No recuerdo tu {key}."
-            )
+        with self._lock:
+            record = self.memory.get(key)
+            if record is None:
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.WARNING,
+                    module="memory",
+                    command="recall",
+                    message=f"No recuerdo tu {key}."
+                )
 
-        # Bookkeeping: NO escribe a disco en cada lectura, solo marca "dirty".
-        self._increment_usage(key)
-        self._touch(key)
+            # Bookkeeping: NUNCA escribe a disco de inmediato, sin importar
+            # autosave_enabled — solo marca la memoria como "dirty". El
+            # volcado real ocurre en save()/sync()/export()/autosave().
+            self._increment_usage(key)
+            self._touch(key)
 
         return ActionResult(
             success=True,
@@ -685,6 +763,7 @@ class MemoryManager:
 
     def find_by_tag(self, tag: str) -> dict:
         """O(k): usa el índice invertido de etiquetas en vez de escanear toda la memoria."""
+        tag = self._normalize(tag).lower()
         keys = self._tag_index.get(tag, ())
         return {key: self.memory[key] for key in keys if key in self.memory}
 
@@ -839,33 +918,87 @@ class MemoryManager:
 
     def score_relevance(self, key: str, text: str) -> float:
         """
-        Heurística simple de relevancia de una memoria respecto a un texto:
-        combina coincidencia de clave/valor/alias/tags con importancia y
-        frecuencia de uso. Sirve de base a `rank_memories`/`suggest_memories`
-        y está pensada para evolucionar a un scoring semántico real
-        (embeddings) sin cambiar su firma pública.
+        Calcula qué tan relevante es una memoria para un texto.
         """
-        record = self.memory.get(self._normalize(key))
+
+        normalized_key = self._normalize(key)
+        record = self.memory.get(normalized_key)
+
         if record is None or not text:
             return 0.0
 
-        normalized_text = text.lower()
-        value_text = str(record.get("value", "")).lower()
+        normalized_text = str(text).lower()
 
         score = 0.0
-        if key.lower() in normalized_text:
-            score += 3.0
-        if value_text and value_text in normalized_text:
-            score += 2.0
-        for alias in record.get("aliases", []):
-            if str(alias).lower() in normalized_text:
-                score += 1.5
-        for tag in record.get("tags", []):
-            if str(tag).lower() in normalized_text:
-                score += 1.0
 
-        score += record.get("importance", DEFAULT_IMPORTANCE) * 0.2
-        score += min(record.get("times_used", 0), 10) * 0.05
+        # --------------------------------------------------
+        # CLAVE
+        # --------------------------------------------------
+
+        if normalized_key.lower() in normalized_text:
+            score += 3.0
+
+        # --------------------------------------------------
+        # VALOR
+        # --------------------------------------------------
+
+        value = str(
+            record.get("value", "")
+        ).lower()
+
+        if value and value in normalized_text:
+            score += 4.0
+
+        # --------------------------------------------------
+        # ALIASES
+        # --------------------------------------------------
+
+        for alias in record.get("aliases", []):
+            alias_text = str(alias).lower()
+
+            if alias_text and alias_text in normalized_text:
+                score += 3.0
+
+        # --------------------------------------------------
+        # TAGS
+        # --------------------------------------------------
+
+        for tag in record.get("tags", []):
+            tag_text = str(tag).lower()
+
+            if tag_text and tag_text in normalized_text:
+                score += 1.5
+
+        # --------------------------------------------------
+        # CATEGORÍA
+        # --------------------------------------------------
+
+        category = str(
+            record.get("category", "")
+        ).lower()
+
+        if category and category in normalized_text:
+            score += 1.0
+
+        # --------------------------------------------------
+        # IMPORTANCIA
+        # --------------------------------------------------
+
+        score += (
+            record.get(
+                "importance",
+                DEFAULT_IMPORTANCE
+            ) * 0.2
+        )
+
+        # --------------------------------------------------
+        # USO
+        # --------------------------------------------------
+
+        score += min(
+            record.get("times_used", 0),
+            10
+        ) * 0.05
 
         return round(score, 3)
 
@@ -934,6 +1067,14 @@ class MemoryManager:
         Punto de integración de alto nivel pensado para
         `ConversationManager._persist_memory()`: guarda un resumen del
         turno de conversación como memoria de categoría 'conversation'.
+
+        Para evitar que memory.json crezca sin límite y que
+        `get_relevant_memory()` se llene de ruido, solo se conservan como
+        máximo `MAX_CONVERSATION_TURNS` memorias de esta categoría: al
+        superar el límite se descarta primero el turno más antiguo.
+        Si se necesita retener un dato de forma permanente (nombre de
+        usuario, preferencias, proyecto actual, etc.) debe guardarse con
+        `remember_fact()` / `remember_project()`, no con `remember_turn()`.
         """
         turn_id = data.get("turn_id") or self._generate_id()
         value = data.get("response") or data.get("message") or ""
@@ -946,12 +1087,17 @@ class MemoryManager:
                 message="El turno no tiene contenido para recordar."
             )
 
-        return self.remember({
+        result = self.remember({
             "key": f"turno:{turn_id}",
             "value": value,
             "category": "conversation",
             "importance": MIN_IMPORTANCE,
         })
+
+        if result.success:
+            self._trim_conversation_turns()
+
+        return result
 
     def resolve_alias(self, alias: str) -> str | None:
         """Devuelve la clave "real" a la que apunta un alias, si existe."""
@@ -1021,10 +1167,92 @@ class MemoryManager:
         Seam para una futura búsqueda semántica basada en embeddings.
         Mientras no exista un backend vectorial, degrada de forma
         transparente a `search_text()` sin romper el contrato público.
+
+        IMPORTANTE: esto todavía NO es búsqueda semántica real. No usa
+        embeddings ni una base de datos vectorial: internamente llama a
+        `search_text()`, que hace substring matching. Se deja como
+        interfaz preparada para integrarse con Ollama en el futuro; no
+        debe tratarse como semánticamente equivalente a una búsqueda por
+        similitud real todavía.
         """
         result = self.search_text(data)
         result.command = "search_semantic"
         return result
+        # ==================================================
+        # 7. MEMORIA RELEVANTE PARA IA
+        # ==================================================
+    def get_relevant_memory(self, context: dict) -> list[str]:
+        """
+        Selecciona memorias permanentes relevantes para Ollama.
+        """
+
+        if not context:
+            return []
+
+        user_message = str(
+            context.get("last_user_message") or ""
+        ).lower()
+
+        topic = str(
+            context.get("topic") or ""
+        ).lower()
+
+        query = f"{user_message} {topic}".strip()
+
+        if not query:
+            return []
+
+        # ------------------------------------------
+        # Ranking normal
+        # ------------------------------------------
+
+        ranked = self.rank_memories({
+            "text": query,
+            "limit": 5
+        })
+
+        relevant = []
+
+        for key, score, record in ranked.data or []:
+
+            value = record.get("value")
+
+            if value is None:
+                continue
+
+            # --------------------------------------
+            # Proyecto
+            # --------------------------------------
+
+            if key.startswith("project:"):
+
+                if isinstance(value, dict):
+                    name = value.get("name", "")
+                    description = value.get(
+                        "description",
+                        ""
+                    )
+
+                    relevant.append(
+                        f"Proyecto: {name}. "
+                        f"Descripción: {description}"
+                    )
+
+                else:
+                    relevant.append(
+                        f"Proyecto: {value}"
+                    )
+
+            # --------------------------------------
+            # Memoria normal
+            # --------------------------------------
+
+            else:
+                relevant.append(
+                    f"{key}: {value}"
+                )
+
+        return relevant[:5]
 
     # ==================================================
     # 8. PERSISTENCIA
@@ -1044,7 +1272,12 @@ class MemoryManager:
             return True
 
     def autosave(self, data: dict | None = None) -> ActionResult:
-        """Punto de entrada explícito para volcar cambios pendientes (usa el dirty flag)."""
+        """
+        Guarda manualmente los cambios pendientes (usa el dirty flag).
+        No depende de `autosave_enabled`: es una orden explícita de
+        guardado, útil precisamente cuando el manager corre con
+        `autosave_enabled=False`.
+        """
         wrote = self.save(force=False)
         message = "Memoria sincronizada en disco." if wrote else "No había cambios pendientes."
         return ActionResult(
@@ -1053,12 +1286,97 @@ class MemoryManager:
             module="memory",
             command="autosave",
             message=message,
-            data={"saved": wrote}
+            data={
+                "saved": wrote,
+                "dirty": self._dirty,
+                "last_saved_at": self._last_saved_at,
+            }
+        )
+
+    def set_autosave(self, data: dict) -> ActionResult:
+        """
+        Activa o desactiva el guardado automático en caliente.
+
+        Ejemplo:
+            {"command": "set_autosave", "enabled": False}
+        """
+        if not isinstance(data, dict):
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="set_autosave",
+                message="Datos inválidos."
+            )
+
+        if "enabled" not in data:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="set_autosave",
+                message="No especificaste si autosave debe estar activo."
+            )
+
+        enabled = bool(data["enabled"])
+
+        with self._lock:
+            previous = self.autosave_enabled
+            self.autosave_enabled = enabled
+
+            # Si se acaba de activar y había cambios pendientes,
+            # se guardan inmediatamente.
+            if enabled and self._dirty:
+                self.save(force=False)
+
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="set_autosave",
+            message=(
+                "Guardado automático activado."
+                if enabled
+                else "Guardado automático desactivado."
+            ),
+            data={
+                "previous": previous,
+                "enabled": self.autosave_enabled,
+                "dirty": self._dirty,
+                "last_saved_at": self._last_saved_at,
+            }
+        )
+
+    def autosave_status(self, data: dict | None = None) -> ActionResult:
+        """Devuelve el estado actual del sistema de persistencia."""
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="autosave_status",
+            message="Estado de autosave obtenido.",
+            data={
+                "autosave_enabled": self.autosave_enabled,
+                "dirty": self._dirty,
+                "last_saved_at": self._last_saved_at,
+                "entries": len(self.memory),
+            }
         )
 
     def mark_dirty(self) -> None:
         """Marca la memoria como modificada, pendiente de persistir."""
         self._dirty = True
+
+    def _persist(self) -> None:
+        """
+        Helper interno usado por todas las operaciones estructurales
+        (remember/update/forget/rename/duplicate/merge/set/clear/...).
+
+        Persistencia diferida (opción B): únicamente marca la memoria
+        como "dirty". El volcado real a disco ocurre en `save()`,
+        `sync()`, `export()` o `autosave()`.
+        """
+        self.mark_dirty()
 
     def export(self, data: dict | None = None) -> ActionResult:
         """Exporta la memoria completa a `data/memory.json` (o a `data.path` si se indica)."""
@@ -1091,8 +1409,7 @@ class MemoryManager:
                     self.memory[self._normalize(key)] = self._normalize_record(record)
 
                 self._index_rebuild()
-                self.mark_dirty()
-                self.save(force=True)
+                self._persist()
 
             return ActionResult(
                 success=True,
@@ -1142,8 +1459,7 @@ class MemoryManager:
         with self._lock:
             self.memory = {self._normalize(key): self._normalize_record(record) for key, record in contenido.items()}
             self._index_rebuild()
-            self.mark_dirty()
-            self.save(force=True)
+            self._persist()
 
         return ActionResult(
             success=True,
@@ -1155,13 +1471,18 @@ class MemoryManager:
 
     def sync(self, data: dict | None = None) -> ActionResult:
         """Fuerza el volcado a disco, haya o no cambios pendientes."""
-        self.save(force=True)
+        wrote = self.save(force=True)
         return ActionResult(
             success=True,
             status=ActionStatus.SUCCESS,
             module="memory",
             command="sync",
-            message="Memoria sincronizada."
+            message="Memoria sincronizada.",
+            data={
+                "saved": wrote,
+                "dirty": self._dirty,
+                "last_saved_at": self._last_saved_at,
+            }
         )
 
     def validate(self, data: dict | None = None) -> ActionResult:
@@ -1233,6 +1554,20 @@ class MemoryManager:
             return DEFAULT_CATEGORY
         return category.strip().lower()
 
+    def _normalize_tag_list(self, items: list | None) -> list[str]:
+        """
+        Normaliza una lista de tags/aliases: recorta espacios, colapsa
+        espacios internos y pasa a minúsculas, descartando vacíos. Se usa
+        al crear el registro para que `find_by_tag("Project")` y
+        `find_by_tag("project")` encuentren lo mismo.
+        """
+        normalized = []
+        for item in items or []:
+            value = self._normalize(item).lower()
+            if value:
+                normalized.append(value)
+        return normalized
+
     def _clamp_importance(self, importance: Any) -> int:
         try:
             value = int(importance)
@@ -1290,8 +1625,8 @@ class MemoryManager:
             "source": source,
             "times_used": 0,
             "last_access": None,
-            "aliases": list(aliases or []),
-            "tags": list(tags or []),
+            "aliases": self._normalize_tag_list(aliases),
+            "tags": self._normalize_tag_list(tags),
         }
 
     def _normalize_record(self, raw: Any) -> dict:
@@ -1313,8 +1648,8 @@ class MemoryManager:
             "source": raw.get("source", "user"),
             "times_used": raw.get("times_used") or 0,
             "last_access": raw.get("last_access"),
-            "aliases": raw.get("aliases") or [],
-            "tags": raw.get("tags") or [],
+            "aliases": self._normalize_tag_list(raw.get("aliases")),
+            "tags": self._normalize_tag_list(raw.get("tags")),
         }
 
     def _touch(self, key: str) -> None:
@@ -1328,6 +1663,29 @@ class MemoryManager:
         if key in self.memory:
             self.memory[key]["times_used"] = self.memory[key].get("times_used", 0) + 1
             self.mark_dirty()
+
+    def _trim_conversation_turns(self) -> None:
+        """
+        Mantiene como máximo `MAX_CONVERSATION_TURNS` memorias de la
+        categoría 'conversation' (las creadas por `remember_turn()`),
+        eliminando las más antiguas cuando se supera el límite. Evita que
+        memory.json crezca sin control y que `get_relevant_memory()` se
+        llene de ruido con cada turno de charla.
+        """
+        with self._lock:
+            keys = list(self._category_index.get("conversation", ()))
+            if len(keys) <= MAX_CONVERSATION_TURNS:
+                return
+
+            turns = [(key, self.memory[key]) for key in keys if key in self.memory]
+            turns.sort(key=lambda kv: kv[1].get("created_at") or "")
+
+            excess = len(turns) - MAX_CONVERSATION_TURNS
+            for key, record in turns[:excess]:
+                self.memory.pop(key, None)
+                self._index_remove(key, record)
+
+            self._persist()
 
     # --- Índices internos (categoría / etiquetas) ---------------------
     def _index_add(self, key: str, record: dict) -> None:
@@ -1368,18 +1726,39 @@ class MemoryManager:
     # 10. SERIALIZACIÓN
     # ==================================================
     def to_dict(self) -> dict:
-        return {
-            "memory": self.memory,
-            "dirty": self._dirty,
-            "last_saved_at": self._last_saved_at,
-        }
+        with self._lock:
+            return {
+                "memory": self.memory,
+                "dirty": self._dirty,
+                "last_saved_at": self._last_saved_at,
+                "autosave_enabled": self.autosave_enabled,
+            }
 
     def from_dict(self, data: dict) -> "MemoryManager":
-        raw = data.get("memory", {}) if data else {}
+        """
+        Reconstruye el estado del manager en RAM a partir de un dict
+        (por ejemplo, el resultado de `to_dict()`).
+
+        IMPORTANTE: `from_dict()` solo carga en memoria y marca la
+        memoria como "dirty"; NO persiste a disco automáticamente.
+        Para escribir el resultado en `memory.json` hay que llamar
+        explícitamente a `save()` (o `sync()` / `export()`) después.
+        Este comportamiento es intencional: separa "reconstruir estado
+        en RAM" de "persistir a disco".
+        """
+        if not isinstance(data, dict):
+            return self
+
+        raw = data.get("memory", {})
+        if not isinstance(raw, dict):
+            raw = {}
+
         with self._lock:
             self.memory = {self._normalize(key): self._normalize_record(record) for key, record in raw.items()}
             self._index_rebuild()
-            self._last_saved_at = data.get("last_saved_at") if data else None
+            self._last_saved_at = data.get("last_saved_at")
+            if "autosave_enabled" in data:
+                self.autosave_enabled = bool(data["autosave_enabled"])
             self.mark_dirty()
         return self
 
@@ -1397,3 +1776,97 @@ class MemoryManager:
 
     def __repr__(self) -> str:
         return f"<MemoryManager entradas={len(self.memory)} dirty={self._dirty}>"
+
+    # ==================================================
+    # MEMORIA PERMANENTE DESDE CONVERSACIÓN
+    # ==================================================
+
+    def remember_fact(
+        self,
+        key: str,
+        value: Any,
+        category: str = "general",
+        importance: int = DEFAULT_IMPORTANCE,
+        aliases: list | None = None,
+        tags: list | None = None
+    ) -> ActionResult:
+        """
+        Guarda un dato permanente identificado por una clave.
+        Pensado para ser utilizado directamente por Conversation/IA.
+        """
+
+        return self.remember({
+            "key": key,
+            "value": value,
+            "category": category,
+            "importance": importance,
+            "source": "conversation",
+            "aliases": aliases or [],
+            "tags": tags or [],
+        })
+
+    # ==================================================
+    # PROYECTOS
+    # ==================================================
+
+    def remember_project(
+        self,
+        project_name: str,
+        description: str = ""
+    ) -> ActionResult:
+        """
+        Guarda un proyecto como memoria permanente.
+        Cada proyecto tiene su propia clave (`project:<nombre>`), lo que
+        permite recordar varios proyectos distintos sin pisarse entre sí.
+        """
+
+        project_name = self._normalize(project_name)
+
+        if not project_name:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="remember_project",
+                message="No se especificó el nombre del proyecto."
+            )
+
+        key = f"project:{project_name.lower()}"
+
+        return self.remember({
+            "key": key,
+            "value": {
+                "name": project_name,
+                "description": description
+            },
+            "category": "projects",
+            "importance": 5,
+            "source": "conversation",
+            "aliases": [
+                "proyecto",
+                "mi proyecto",
+                project_name.lower()
+            ],
+            "tags": [
+                "project",
+                "proyecto",
+                "ia"
+            ]
+        })
+
+    def get_project(self, project_name: str) -> dict | None:
+        """
+        Recupera un proyecto específico.
+        """
+
+        if not project_name:
+            return None
+
+        key = f"project:{self._normalize(project_name).lower()}"
+
+        record = self.memory.get(key)
+
+        if not record:
+            return None
+
+        return record.get("value")

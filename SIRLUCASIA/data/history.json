@@ -1,46 +1,13 @@
 [
     {
-        "id": "ecba6ed4-307d-44e0-a2dc-36b6ffe11226",
-        "timestamp": "2026-08-11T20:03:41.508806",
+        "id": "abc35a0f-a7b1-4128-a54a-5adb11d80b71",
+        "timestamp": "2026-08-15T20:15:45.252182",
         "module": "system",
         "command": "open",
         "topic": {
             "program": "word",
-            "pid": 21624
+            "pid": 6532
         },
-        "status": null,
-        "result": null,
-        "duration": null,
-        "user_input": null
-    },
-    {
-        "id": "371f7bf6-2042-4a39-8d0b-a9641aeed164",
-        "timestamp": "2026-08-11T20:03:46.067847",
-        "module": "conversation",
-        "command": "unknown",
-        "topic": null,
-        "status": null,
-        "result": null,
-        "duration": null,
-        "user_input": null
-    },
-    {
-        "id": "42cd78fd-4bb4-41c4-9514-3a33c51669b4",
-        "timestamp": "2026-08-11T20:03:56.963145",
-        "module": "conversation",
-        "command": "unknown",
-        "topic": null,
-        "status": null,
-        "result": null,
-        "duration": null,
-        "user_input": null
-    },
-    {
-        "id": "a521bd49-938e-4d16-bf58-407e6247826f",
-        "timestamp": "2026-08-11T20:04:12.380386",
-        "module": "conversation",
-        "command": "unknown",
-        "topic": null,
         "status": null,
         "result": null,
         "duration": null,
