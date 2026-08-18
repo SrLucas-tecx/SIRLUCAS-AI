@@ -13,7 +13,6 @@ from app.core.memory_manager import MemoryManager
 from app.core.knowledge_manager import KnowledgeManager
 from app.core.context_manager import ContextManager
 from app.core.task_executor import TaskExecutor
-from app.core.project_memory_integration import ProjectMemoryIntegration
 from app.service.system_manager import SystemManager
 
 
@@ -24,6 +23,26 @@ logger = logging.getLogger(__name__)
 
 class ConversationManager:
     """Orquestador puro: coordina Memoria, Conocimiento, Contexto y Ejecución de tareas."""
+
+    # ==================================================
+    # Comandos de proyecto manejados por ProjectMemoryHandler
+    # ==================================================
+    # Mismo set de comandos que ProjectMemoryHandler.handle_rule()
+    # sabe despachar. Se usa para decidir, sobre el resultado que
+    # Parser/RuleEngine ya produjo, si corresponde delegarlo al
+    # handler de proyectos (sin volver a ejecutar RuleEngine).
+    PROJECT_MEMORY_COMMANDS = frozenset({
+        "remember_project",
+        "remember_project_description",
+        "recall_project",
+        "update_project",
+        "get_project_details",
+        "list_projects",
+        "search_project",
+        "forget_project",
+        "create_project",
+        "add_project_detail",
+    })
 
     # ==================================================
     # Inicialización
@@ -43,8 +62,12 @@ class ConversationManager:
         self.context = context or ContextManager()
         self.task_executor = task_executor
 
-        # Inicializar integración de proyectos
-        self.project_memory = ProjectMemoryIntegration(self.memory)
+        # Handler de proyectos: consume directamente el rule_result que
+        # ya produjo Parser/RuleEngine (ver _handle_project_action).
+        # NO carga reglas ni crea su propio RuleEngine: eso ya lo hace
+        # Parser una única vez, combinando parser_rules.json y
+        # parser_rules_proyectos.json.
+        
 
         # ==================================================
         # Cargar los JSON externos
@@ -90,7 +113,7 @@ class ConversationManager:
 
         logger.info(
             "[ConversationManager] Inicializado correctamente "
-            "con intents, responses y project memory integration."
+            "con intents, responses y project memory handler."
         )
 
     # ==================================================
@@ -125,13 +148,21 @@ class ConversationManager:
         """
         Orquesta un turno de conversación completo.
 
+        `data` es el resultado que ya produjo Parser.parse(message,
+        context) (contiene, entre otros, "message"/"topic", "module",
+        "command", "rule" y, si aplica, "project_name"). ConversationManager
+        NO vuelve a ejecutar ningún RuleEngine: reutiliza este resultado
+        para todo, incluida la detección de acciones de proyecto.
+
         Orden:
 
             1. Lee el contexto actual.
             2. Consulta memorias relevantes.
-            3. Resuelve la respuesta.
-            4. Persiste contexto y memoria del turno.
-            5. Guarda los cambios pendientes de memoria UNA SOLA VEZ.
+            3. Delega la acción de proyecto (si aplica) a
+               ProjectMemoryHandler, usando el resultado de Parser.
+            4. Resuelve la respuesta.
+            5. Persiste contexto y memoria del turno.
+            6. Guarda los cambios pendientes de memoria UNA SOLA VEZ.
 
         La persistencia de memoria utiliza dirty flag:
         las operaciones internas modifican RAM y marcan la memoria
@@ -166,14 +197,15 @@ class ConversationManager:
         )
 
         # ==================================================
-        # 3. NUEVO: Auto-guardar proyectos detectados
+        # 3. Acciones de proyecto (si el resultado de Parser
+        #    corresponde a una de ellas)
         # ==================================================
-        # Ejecuta RuleEngine para detectar y guardar automáticamente
-        # proyectos mencionados en la conversación.
+        # Reutiliza `data` (ya parseado por Parser/RuleEngine) en vez de
+        # volver a correr un RuleEngine sobre `message`.
         # Ejemplo: "mi proyecto es SIRLUCAS" → auto-guardado en memory.json
-        
-        project_save_result = self.project_memory.auto_save_project(message)
-        
+
+        project_save_result = self._handle_project_action(data)
+
         if project_save_result and project_save_result.success:
             logger.info(
                 f"[ConversationManager] Proyecto auto-guardado: {project_save_result.message}"
@@ -449,6 +481,32 @@ class ConversationManager:
                 "response": response,
             }
         )
+
+    # ==================================================
+
+    def _handle_project_action(self, rule_result: dict) -> ActionResult | None:
+        """
+        Si el resultado de Parser/RuleEngine corresponde a una acción de
+        proyecto (module == "memory" y command en PROJECT_MEMORY_COMMANDS),
+        la delega en ProjectMemoryHandler, que a su vez persiste el
+        proyecto vía MemoryManager.
+
+        Reemplaza la responsabilidad que antes tenía
+        ProjectMemoryIntegration, sin volver a ejecutar un RuleEngine
+        duplicado: se reutiliza el resultado que Parser ya produjo para
+        este mismo mensaje.
+        """
+
+        if not isinstance(rule_result, dict):
+            return None
+
+        if rule_result.get("module") != "memory":
+            return None
+
+        if rule_result.get("command") not in self.PROJECT_MEMORY_COMMANDS:
+            return None
+
+        return self.project_memory_handler.handle_rule(rule_result)
 
     # ==================================================
 

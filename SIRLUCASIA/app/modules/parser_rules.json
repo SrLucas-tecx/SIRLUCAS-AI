@@ -31,15 +31,9 @@
     "priority": 2,
     "regex": [
       "^como me llamo$",
-      "^c?mo me llamo$",
-      "^¿como me llamo\\??$",
-      "^¿cómo me llamo\\??$",
+      "^cómo me llamo$",
       "^quien soy$",
-      "^quién soy$",
-      "^cual es mi nombre$",
-      "^cuál es mi nombre$",
-      "^¿cual es mi nombre\\??$",
-      "^¿cuál es mi nombre\\??$"
+      "^quién soy$"
     ],
     "command": "recall",
     "key": "nombre"
@@ -75,8 +69,9 @@
     "priority": 5,
     "regex": [
       "^que sabes de mi$",
-      "^qu? sabes de m?$",
-      "^mu?strame todo lo que recuerdas$"
+      "^qué sabes de mí$",
+      "^muestrame todo lo que recuerdas$",
+      "^muéstrame todo lo que recuerdas$"
     ],
     "command": "search"
   },
@@ -86,7 +81,7 @@
     "priority": 5,
     "regex": [
       "^cuantas memorias tengo$",
-      "^cu?ntas memorias tengo$",
+      "^cuántas memorias tengo$",
       "^cuantos datos guardados$"
     ],
     "command": "count"
@@ -96,9 +91,12 @@
     "module": "memory",
     "priority": 5,
     "regex": [
-      "^mu?strame mis datos personales$",
-      "^mu?strame mis gustos$",
-      "^mu?strame mis estudios$"
+      "^muestrame mis datos personales$",
+      "^muéstrame mis datos personales$",
+      "^muestrame mis gustos$",
+      "^muéstrame mis gustos$",
+      "^muestrame mis estudios$",
+      "^muéstrame mis estudios$"
     ],
     "command": "categories"
   },
@@ -121,8 +119,7 @@
       "^importa mi memoria$",
       "^carga mi memoria$"
     ],
-    "command": "import_memories",
-    "file_group": 1
+    "command": "import_memories"
   },
   {
     "name": "guardar_ciudad",
@@ -133,7 +130,8 @@
     ],
     "command": "remember",
     "key": "ciudad",
-    "value_group": 1
+    "value_group": 1,
+    "category": "personal"
   },
   {
     "name": "recordar_ciudad",
@@ -141,9 +139,7 @@
     "priority": 2,
     "regex": [
       "^donde vivo$",
-      "^dónde vivo$",
-      "^¿donde vivo\\??$",
-      "^¿dónde vivo\\??$"
+      "^dónde vivo$"
     ],
     "command": "recall",
     "key": "ciudad"
@@ -158,7 +154,8 @@
     ],
     "command": "remember",
     "key": "profesion",
-    "value_group": 1
+    "value_group": 1,
+    "category": "personal"
   },
   {
     "name": "recordar_profesion",
@@ -166,16 +163,68 @@
     "priority": 2,
     "regex": [
       "^que soy$",
-      "^qué soy$",
-      "^¿que soy\\??$",
-      "^¿qué soy\\??$",
-      "^cual es mi profesion$",
-      "^cuál es mi profesión$",
-      "^¿cual es mi profesion\\??$",
-      "^¿cuál es mi profesión\\??$"
+      "^qué soy$"
     ],
     "command": "recall",
     "key": "profesion"
+  },
+  {
+    "name": "olvidar_memoria",
+    "module": "memory",
+    "priority": 1,
+    "regex": [
+      "^olvida (.+)$"
+    ],
+    "command": "forget",
+    "key_group": 1
+  },
+  {
+    "name": "actualizar_memoria",
+    "module": "memory",
+    "priority": 2,
+    "regex": [
+      "^actualiza (.+) a (.+)$",
+      "^cambia (.+) a (.+)$"
+    ],
+    "command": "update",
+    "key_group": 1,
+    "value_group": 2
+  },
+  {
+    "name": "resumen_memoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^que recuerdas$",
+      "^qué recuerdas$",
+      "^resumen de memoria$"
+    ],
+    "command": "summary"
+  },
+  {
+    "name": "listar_memorias_por_categoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^lista memorias de categoria (.+)$",
+      "^listar memorias de categoria (.+)$",
+      "^muestrame mis memorias de categoria (.+)$",
+      "^que memorias de categoria (.+) tengo$"
+    ],
+    "command": "list_by_category",
+    "category_group": 1
+  },
+  {
+    "name": "buscar_memoria_por_categoria",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^busca memorias de categoria (.+)$",
+      "^buscar memorias de categoria (.+)$",
+      "^encuentra memorias de categoria (.+)$"
+    ],
+    "command": "search_by_category",
+    "category_group": 1
   },
   {
     "name": "buscar_conocimiento",
@@ -183,15 +232,15 @@
     "priority": 5,
     "regex": [
       "^que es (.+)$",
+      "^qué es (.+)$",
       "^quien es (.+)$",
-      "^qu? es (.+)$",
-      "^qui?n es (.+)$",
+      "^quién es (.+)$",
       "^definicion de (.+)$",
-      "^definici?n de (.+)$",
+      "^definición de (.+)$",
       "^explicame (.+)$",
-      "^expl?came (.+)$",
+      "^explícame (.+)$",
       "^hablame de (.+)$",
-      "^h?blame de (.+)$"
+      "^háblame de (.+)$"
     ],
     "command": "search",
     "topic_group": 1
@@ -212,25 +261,6 @@
     "topic_group": 1
   },
   {
-    "name": "cerrar_referencia",
-    "module": "system",
-    "priority": 2,
-    "regex": [
-      "^cierralo$",
-      "^ci?rralo$",
-      "^cierrala$",
-      "^ci?rrala$",
-      "^cerrarlo$",
-      "^cerrarla$",
-      "^terminalo$",
-      "^term?nalo$",
-      "^terminala$",
-      "^term?nala$"
-    ],
-    "command": "close",
-    "topic": "lo"
-  },
-  {
     "name": "cerrar_app",
     "module": "system",
     "priority": 10,
@@ -244,6 +274,36 @@
     "topic_group": 1
   },
   {
+    "name": "cerrar_referencia",
+    "module": "system",
+    "priority": 2,
+    "regex": [
+      "^cierralo$",
+      "^ciérralo$",
+      "^cierrala$",
+      "^ciérrala$",
+      "^cerrarlo$",
+      "^cerrarla$",
+      "^terminalo$",
+      "^termínalo$",
+      "^terminala$",
+      "^termínala$"
+    ],
+    "command": "close",
+    "topic": "lo"
+  },
+  {
+    "name": "cerrar_generico",
+    "module": "system",
+    "priority": 2,
+    "regex": [
+      "^cierra$",
+      "^cerrar$"
+    ],
+    "command": "close",
+    "topic": "lo"
+  },
+  {
     "name": "reiniciar_app",
     "module": "system",
     "priority": 10,
@@ -253,6 +313,19 @@
     ],
     "command": "restart",
     "topic_group": 1
+  },
+  {
+    "name": "reiniciar_referencia",
+    "module": "system",
+    "priority": 2,
+    "regex": [
+      "^reinicialo$",
+      "^reinícialo$",
+      "^reiniciala$",
+      "^reiníciala$"
+    ],
+    "command": "restart",
+    "topic": "lo"
   },
   {
     "name": "calcular",
@@ -279,12 +352,22 @@
     "topic_group": 1
   },
   {
+    "name": "calculo_directo",
+    "module": "calculator",
+    "priority": 5,
+    "regex": [
+      "^([0-9]+(\\.[0-9]+)?(?:\\s*[+\\-*/%^]\\s*[0-9]+(\\.[0-9]+)?)+)$"
+    ],
+    "command": "calculate",
+    "topic_group": 1
+  },
+  {
     "name": "hora",
     "module": "system",
     "priority": 8,
     "regex": [
       "^que hora es$",
-      "^qu? hora es$"
+      "^qué hora es$"
     ],
     "command": "time"
   },
@@ -294,7 +377,7 @@
     "priority": 8,
     "regex": [
       "^que fecha es hoy$",
-      "^qu? fecha es hoy$",
+      "^qué fecha es hoy$",
       "^fecha de hoy$"
     ],
     "command": "date"
@@ -305,7 +388,7 @@
     "priority": 20,
     "regex": [
       "^como esta el clima$",
-      "^c?mo est? el clima$",
+      "^cómo está el clima$",
       "^clima en (.+)$"
     ],
     "command": "weather",
@@ -314,30 +397,42 @@
   {
     "name": "escribir_documento",
     "module": "document",
-    "command": "write",
     "priority": 15,
     "regex": [
       "^escribe en ([a-zA-Z0-9_.-]+) (.+)$",
       "^agrega al documento ([a-zA-Z0-9_.-]+) (.+)$"
     ],
+    "command": "write",
     "topic_group": 1,
     "content_group": 2
   },
   {
     "name": "leer_documento",
     "module": "document",
-    "command": "read",
     "priority": 15,
     "regex": [
       "^lee (.+)$",
       "^abre documento (.+)$"
     ],
+    "command": "read",
     "topic_group": 1
+  },
+  {
+    "name": "leer_referencia",
+    "module": "document",
+    "priority": 2,
+    "regex": [
+      "^leelo$",
+      "^léelo$",
+      "^leela$",
+      "^léela$"
+    ],
+    "command": "read",
+    "topic": "lo"
   },
   {
     "name": "eliminar_documento",
     "module": "document",
-    "command": "delete",
     "priority": 15,
     "regex": [
       "^elimina (.+)$",
@@ -346,7 +441,21 @@
       "^borrar documento (.+)$",
       "^eliminar (.+)$"
     ],
+    "command": "delete",
     "topic_group": 1
+  },
+  {
+    "name": "eliminar_documento_referencia",
+    "module": "document",
+    "priority": 10,
+    "regex": [
+      "^elimínalo$",
+      "^eliminalo$",
+      "^bórralo$",
+      "^borralo$"
+    ],
+    "command": "delete",
+    "topic": "lo"
   },
   {
     "name": "renombrar_documento",
@@ -385,112 +494,6 @@
     "command": "list_documents"
   },
   {
-    "name": "informacion_documento",
-    "module": "document",
-    "priority": 20,
-    "regex": [
-      "^informacion de (.+)$",
-      "^info de (.+)$",
-      "^datos de (.+)$"
-    ],
-    "command": "info",
-    "topic_group": 1
-  },
-  {
-    "name": "conversacion",
-    "module": "conversation",
-    "priority": 100,
-    "regex": [
-      "^hola+$",
-      "^holi$",
-      "^(hello|hi|hey)$",
-      "^buen dia$",
-      "^buenos dias$",
-      "^buenas$",
-      "^buenas tardes$",
-      "^buenas noches$",
-      "^(que onda|qu? onda)$",
-      "^(que tal|qu? tal)$",
-      "^(como estas|c?mo estas|c?mo te encuentras)$",
-      "^gracias$",
-      "^muchas gracias$",
-      "^te agradezco$",
-      "^quien eres$",
-      "^qui?n eres$"
-    ],
-    "command": "talk",
-    "topic_group": 0
-  },
-  {
-    "name": "conversacion_despedidas",
-    "module": "conversation",
-    "priority": 100,
-    "regex": [
-      "^(adios|adi?s)$",
-      "^(hasta luego|nos vemos|bye)$",
-      "^(chao|chau)$",
-      "^(cu?date|que te vaya bien)$",
-      "^(hasta pronto|hasta ma?ana)$"
-    ],
-    "command": "goodbye",
-    "topic_group": 0
-  },
-  {
-    "name": "historial",
-    "module": "history",
-    "priority": 20,
-    "regex": [
-      "^historial$",
-      "^mostrar historial$",
-      "^ultimos comandos$",
-      "^qu? hice$",
-      "^que hice$"
-    ],
-    "command": "history"
-  },
-  {
-    "name": "crear_documento",
-    "module": "document",
-    "command": "create",
-    "priority": 15,
-    "regex": [
-      "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-      "^crear un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-      "^genera un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
-      "^nuevo ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$"
-    ],
-    "format_group": 1,
-    "topic_group": 2
-  },
-  {
-    "name": "crear_documento_con_contenido_llamado",
-    "module": "document",
-    "priority": 10,
-    "regex": [
-      "^crea un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$",
-      "^crear un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$"
-    ],
-    "command": "create",
-    "topic_group": 1,
-    "content_group": 2,
-    "format": "docx"
-  },
-  {
-    "name": "crear_documento_con_contenido",
-    "module": "document",
-    "priority": 25,
-    "regex": [
-      "^crea un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
-      "^crear un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
-      "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+) con el texto (.+)$",
-      "^crear un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+) con el texto (.+)$"
-    ],
-    "command": "create",
-    "format_group": 1,
-    "topic_group": 2,
-    "content_group": 3
-  },
-  {
     "name": "listar_documentos_por_formato",
     "module": "document",
     "priority": 20,
@@ -504,149 +507,204 @@
     "format_group": 1
   },
   {
-    "name": "calculo_directo",
-    "module": "calculator",
-    "priority": 5,
-    "regex": [
-      "^([0-9]+(?:\\.[0-9]+)?(?:\\s*[+\\-*/%^]\\s*[0-9]+(?:\\.[0-9]+)?)+)$"
-    ],
-    "command": "calculate",
-    "topic_group": 0
-  },
-  {
-    "name": "olvidar_memoria",
-    "module": "memory",
-    "priority": 1,
-    "regex": [
-      "^olvida (.+)$"
-    ],
-    "command": "forget",
-    "key_group": 1
-  },
-  {
-    "name": "actualizar_memoria_directa",
-    "module": "memory",
-    "priority": 2,
-    "regex": [
-      "^actualiza (.+) a (.+)$",
-      "^cambia (.+) a (.+)$"
-    ],
-    "command": "update",
-    "key_group": 1,
-    "value_group": 2
-  },
-  {
-    "name": "listar_memorias_por_categoria",
-    "module": "memory",
-    "priority": 5,
-    "regex": [
-      "^lista memorias de categoria (.+)$",
-      "^listar memorias de categoria (.+)$",
-      "^muestrame mis memorias de categoria (.+)$",
-      "^que memorias de categoria (.+) tengo$"
-    ],
-    "command": "list_by_category",
-    "category_group": 1
-  },
-  {
-    "name": "buscar_memoria_por_categoria",
-    "module": "memory",
-    "priority": 5,
-    "regex": [
-      "^busca memorias de categoria (.+)$",
-      "^buscar memorias de categoria (.+)$",
-      "^encuentra memorias de categoria (.+)$"
-    ],
-    "command": "search_by_category",
-    "category_group": 1
-  },
-  {
-    "name": "resumen_memoria",
-    "module": "memory",
-    "priority": 5,
-    "regex": [
-      "^que recuerdas$",
-      "^qu? recuerdas$",
-      "^resumen de memoria$"
-    ],
-    "command": "summary"
-  },
-  {
-    "name": "actualizar_memoria_contextual",
-    "module": "memory",
-    "priority": 2,
-    "regex": [
-      "^mi (.+) ahora es (.+)$",
-      "^ahora mi (.+) es (.+)$"
-    ],
-    "command": "update",
-    "key_group": 1,
-    "value_group": 2
-  },
-  {
-    "name": "reiniciar_referencia",
-    "module": "system",
-    "priority": 2,
-    "regex": [
-      "^reinicialo$",
-      "^rein?cialo$",
-      "^rein?ciala$",
-      "^reiniciala$"
-    ],
-    "command": "restart",
-    "topic": "lo"
-  },
-  {
-    "name": "cerrar_generico",
-    "module": "system",
-    "priority": 2,
-    "regex": [
-      "^cierra$",
-      "^cerrar$"
-    ],
-    "command": "close",
-    "topic": "lo"
-  },
-  {
-    "name": "leer_referencia",
+    "name": "informacion_documento",
     "module": "document",
-    "priority": 2,
+    "priority": 20,
     "regex": [
-      "^leelo$",
-      "^l?elo$",
-      "^leela$",
-      "^l?ela$"
+      "^informacion de (.+)$",
+      "^info de (.+)$",
+      "^datos de (.+)$"
     ],
-    "command": "read",
-    "topic": "lo"
-  },
-  {
-    "name": "conversacion_saludo",
-    "module": "conversation",
-    "priority": 1,
-    "regex": [
-      "^(hola|holaa+|holi|holis|ola|aloha|hello|hi|hey|buenas|qu? onda|que onda)$"
-    ],
-    "command": "talk",
+    "command": "info",
     "topic_group": 1
   },
   {
-    "name": "conversacion_saludo_nombre",
-    "module": "conversation",
-    "priority": 1,
+    "name": "crear_documento",
+    "module": "document",
+    "priority": 15,
     "regex": [
-      "^(hola(\\s+[a-zA-Z????????????]+)*)$",
-      "^(holaa+(\\s+[a-zA-Z????????????]+)*)$",
-      "^(holi(s)?(\\s+[a-zA-Z????????????]+)*)$",
-      "^(ola(\\s+[a-zA-Z????????????]+)*)$",
-      "^(hello(\\s+[a-zA-Z]+)*)$",
-      "^(hi(\\s+[a-zA-Z]+)*)$",
-      "^(hey(\\s+[a-zA-Z]+)*)$",
-      "^(buenas(\\s+[a-zA-Z????????????]+)*)$",
-      "^(que onda|qu? onda)(\\s+[a-zA-Z????????????]+)*$",
-      "^(que tal|qu? tal)(\\s+[a-zA-Z????????????]+)*$"
+      "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
+      "^genera un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$",
+      "^nuevo ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+)$"
     ],
-    "command": "talk",
+    "command": "create",
+    "format_group": 1,
+    "topic_group": 2
+  },
+  {
+    "name": "crear_documento_con_contenido_llamado",
+    "module": "document",
+    "priority": 10,
+    "regex": [
+      "^crea un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$",
+      "^crear un documento llamado ([a-zA-Z0-9_-]+) con el texto (.+)$"
+    ],
+    "command": "create",
+    "format": "docx",
+    "topic_group": 1,
+    "content_group": 2
+  },
+  {
+    "name": "crear_documento_con_contenido",
+    "module": "document",
+    "priority": 25,
+    "regex": [
+      "^crea un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
+      "^crear un ([a-zA-Z]+) ([a-zA-Z0-9_-]+) con el texto (.+)$",
+      "^crea un ([a-zA-Z]+) llamado ([a-zA-Z0-9_-]+) con el texto (.+)$"
+    ],
+    "command": "create",
+    "format_group": 1,
+    "topic_group": 2,
+    "content_group": 3
+  },
+  {
+    "name": "crear_bloc_de_notas",
+    "module": "document",
+    "priority": 15,
+    "regex": [
+      "^crea un bloc de notas llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un bloc de notas llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "txt",
     "topic_group": 1
+  },
+  {
+    "name": "crear_markdown",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un markdown llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un archivo md llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "md",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_json",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un json llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un json llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "json",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_pdf",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un pdf llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un archivo pdf llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "pdf",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_word",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un word llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un documento word llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "docx",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_excel",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea un excel llamado ([a-zA-Z0-9_-]+)$",
+      "^crear un archivo excel llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "xlsx",
+    "topic_group": 1
+  },
+  {
+    "name": "crear_presentacion",
+    "module": "document",
+    "priority": 12,
+    "regex": [
+      "^crea una presentacion llamada ([a-zA-Z0-9_-]+)$",
+      "^crear una presentacion llamada ([a-zA-Z0-9_-]+)$",
+      "^crea un powerpoint llamado ([a-zA-Z0-9_-]+)$"
+    ],
+    "command": "create",
+    "format": "pptx",
+    "topic_group": 1
+  },
+  {
+    "name": "conversacion",
+    "module": "conversation",
+    "priority": 100,
+    "regex": [
+      "^hola+$",
+      "^holi$",
+      "^hello$",
+      "^hi$",
+      "^hey$",
+      "^buen dia$",
+      "^buenos dias$",
+      "^buenas$",
+      "^buenas tardes$",
+      "^buenas noches$",
+      "^que onda$",
+      "^qué onda$",
+      "^que tal$",
+      "^qué tal$",
+      "^como estas$",
+      "^cómo estas$",
+      "^cómo te encuentras$",
+      "^gracias$",
+      "^muchas gracias$",
+      "^te agradezco$",
+      "^quien eres$",
+      "^quién eres$"
+    ],
+    "command": "talk"
+  },
+  {
+    "name": "conversacion_despedida",
+    "module": "conversation",
+    "priority": 100,
+    "regex": [
+      "^adios$",
+      "^adiós$",
+      "^hasta luego$",
+      "^nos vemos$",
+      "^bye$",
+      "^chao$",
+      "^chau$",
+      "^cuidate$",
+      "^cuídate$",
+      "^que te vaya bien$",
+      "^hasta pronto$",
+      "^hasta manana$",
+      "^hasta mañana$"
+    ],
+    "command": "goodbye"
+  },
+  {
+    "name": "historial",
+    "module": "history",
+    "priority": 20,
+    "regex": [
+      "^historial$",
+      "^mostrar historial$",
+      "^ultimos comandos$",
+      "^qué hice$"
+    ],
+    "command": "history"
   }
 ]

@@ -9,28 +9,53 @@ class Parser:
 
     Responsabilidades:
     - Normalizar el mensaje.
-    - Ejecutar las reglas de parser_rules.json.
+    - Ejecutar las reglas combinadas de parser_rules.json y
+      parser_rules_proyectos.json.
     - Aplicar información del contexto cuando sea necesario.
     - Devolver un resultado uniforme al resto del sistema.
 
     El Parser NO ejecuta acciones ni modifica la memoria.
+
+    Parser es el ÚNICO componente que carga reglas y crea un RuleEngine.
+    Las reglas de proyecto (parser_rules_proyectos.json) siguen en un
+    archivo separado solo por organización, pero se combinan aquí en un
+    único RuleEngine para evitar tener dos motores de reglas procesando
+    el mismo mensaje por separado. ProjectMemoryHandler consume
+    directamente el resultado de este RuleEngine (ver
+    ConversationManager._handle_project_action).
     """
 
     def __init__(self):
 
         self.normalizer = Normalizer()
 
-        self.rules = JSONManager.load(
+        general_rules = JSONManager.load(
             "app/modules/parser_rules.json"
         )
 
-        if self.rules is None:
-            self.rules = []
+        if general_rules is None:
+            general_rules = []
+
+        project_rules = JSONManager.load(
+            "app/modules/parser_rules_proyectos.json"
+        )
+
+        if project_rules is None:
+            project_rules = []
+
+        # Reglas combinadas: los JSON se mantienen separados solo para
+        # organización (generales vs. proyectos), pero ambos alimentan
+        # un único RuleEngine.
+        self.rules = general_rules + project_rules
 
         self.rule_engine = RuleEngine(self.rules)
 
         print("=" * 50)
-        print(f"[Parser] {len(self.rules)} reglas cargadas.")
+        print(
+            f"[Parser] {len(general_rules)} reglas generales + "
+            f"{len(project_rules)} reglas de proyectos = "
+            f"{len(self.rules)} reglas cargadas."
+        )
         print("=" * 50)
 
     def parse(self, message, context=None):
@@ -148,7 +173,7 @@ class Parser:
 
         # Si una regla devuelve project_name, conservamos
         # explícitamente el dato para que ConversationManager
-        # pueda enviarlo a MemoryManager.
+        # pueda enviarlo a MemoryManager (vía ProjectMemoryHandler).
         if "project_name" in result:
 
             project_name = result.get("project_name")
