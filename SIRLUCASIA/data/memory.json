@@ -1,86 +1,15 @@
 {
-    "profesion": {
-        "id": "36ecd122b58949f883ca603704f6694b",
-        "value": "juan",
-        "category": "general",
-        "created_at": "2026-08-05T11:22:32.634797",
-        "updated_at": "2026-08-05T11:22:32.634797",
-        "importance": 2,
-        "source": "user",
-        "times_used": 0,
-        "last_access": null,
-        "aliases": [],
-        "tags": []
-    },
-    "ciudad": {
-        "id": "cb3fd61ef6bf48568bad90aca9ed43c0",
-        "value": "toluca",
-        "category": "general",
-        "created_at": "2026-08-08T10:50:55.049627",
-        "updated_at": "2026-08-08T10:50:55.049627",
-        "importance": 2,
-        "source": "user",
-        "times_used": 0,
-        "last_access": null,
-        "aliases": [],
-        "tags": []
-    },
     "nombre": {
-        "id": "357f91ded2bb4f63914e944883f8e2fc",
-        "value": "juan",
-        "category": "personal",
-        "created_at": "2026-08-09T08:44:18.768706",
-        "updated_at": "2026-08-10T16:59:57.641795",
+        "id": "fb3be1d3dbc849309674b792e3a7766b",
+        "value": "Lucas",
+        "category": "general",
+        "created_at": "2026-08-17T19:50:21.087751",
+        "updated_at": "2026-08-17T19:50:21.087751",
         "importance": 2,
         "source": "user",
         "times_used": 0,
         "last_access": null,
         "aliases": [],
         "tags": []
-    },
-    "project_name": {
-        "id": "d84c5695533744de94692affa05fc7c5",
-        "value": "Silukitas",
-        "category": "personal",
-        "created_at": "2026-08-16T10:05:31.008156",
-        "updated_at": "2026-08-16T10:17:02.809855",
-        "importance": 5,
-        "source": "conversation",
-        "times_used": 0,
-        "last_access": null,
-        "aliases": [
-            "proyecto",
-            "mi proyecto",
-            "el proyecto",
-            "proyecto actual"
-        ],
-        "tags": [
-            "project",
-            "proyecto"
-        ]
-    },
-    "project:iagenerator": {
-        "id": "17fa093f07ad47248a20fd42284521e6",
-        "value": {
-            "name": "IAGENERATOR",
-            "description": "Proyecto de IA generativa"
-        },
-        "category": "projects",
-        "created_at": "2026-08-16T14:49:14.077660",
-        "updated_at": "2026-08-16T14:49:14.077660",
-        "importance": 5,
-        "source": "conversation",
-        "times_used": 0,
-        "last_access": null,
-        "aliases": [
-            "proyecto",
-            "mi proyecto",
-            "iagenerator"
-        ],
-        "tags": [
-            "project",
-            "proyecto",
-            "ia"
-        ]
     }
 }

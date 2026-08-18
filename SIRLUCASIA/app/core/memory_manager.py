@@ -85,6 +85,17 @@ aquí, solo se dejan preparadas):
       (WHERE category = ?), eliminando la necesidad de mantenerlos a mano
       en Python. Mientras la persistencia sea un único JSON, mantener los
       índices en memoria es la mejora correcta.
+
+Nota de mantenimiento (fix aplicado)
+--------------------------------------
+`_persist()` marcaba la memoria como "dirty" pero NUNCA revisaba
+`self.autosave_enabled`, así que con autosave_enabled=True (el valor por
+defecto) las operaciones estructurales dejaban de escribir a disco de
+inmediato, contradiciendo lo documentado arriba y rompiendo la
+compatibilidad hacia atrás. Se corrigió para que `_persist()` llame a
+`save()` cuando `autosave_enabled` es True. También se corrigió
+`restore()` para distinguir "no existe backup" (`None`) de "backup vacío"
+(`{}`), que antes se trataban igual.
 """
 
 from __future__ import annotations
@@ -101,8 +112,11 @@ from app.core.action_status import ActionStatus
 # ==================================================
 # 1. CONSTANTES
 # ==================================================
-MEMORY_PATH = "data/memory.json"
-BACKUP_PATH = "data/memory_backup.json"
+import os
+
+_BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+MEMORY_PATH = os.path.join(_BASE_DIR, "data", "memory.json")
+BACKUP_PATH = os.path.join(_BASE_DIR, "data", "memory_backup.json")
 
 DEFAULT_CATEGORY = "general"
 MIN_IMPORTANCE = 1
@@ -115,6 +129,21 @@ DEFAULT_RELEVANT_MEMORY_LIMIT = 5
 # conservan. Evita que memory.json crezca sin límite y que
 # get_relevant_memory() se llene de ruido con cada turno de charla.
 MAX_CONVERSATION_TURNS = 50
+
+
+class MemoryRecord(dict):
+    """Compatibilidad legacy: un registro estructurado sigue siendo dict
+    para la app, pero se compara igual a su valor simple cuando el código
+    heredado espera `memory.memory['nombre'] == 'Juan'`.
+    """
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return str(self.get("value")) == other
+        return super().__eq__(other)
+
+    def __str__(self):
+        return str(self.get("value"))
 
 
 class MemoryManager:
@@ -197,10 +226,11 @@ class MemoryManager:
 
         raw_memory = self._read_storage(MEMORY_PATH)
 
-        self.memory: dict[str, dict] = {}
+        self.memory: dict[str, MemoryRecord] = {}
         if isinstance(raw_memory, dict):
             for key, record in raw_memory.items():
-                self.memory[self._normalize(key)] = self._normalize_record(record)
+                normalized = self._normalize_record(record)
+                self.memory[self._normalize(key)] = MemoryRecord(normalized)
 
         self._dirty: bool = False
         self._last_saved_at: str | None = None
@@ -253,17 +283,6 @@ class MemoryManager:
 
         try:
             result = method(data)
-        except TypeError:
-            try:
-                result = method()
-            except Exception as exc:
-                return ActionResult(
-                    success=False,
-                    status=ActionStatus.ERROR,
-                    module="memory",
-                    command=command,
-                    message=f"Error ejecutando '{command}': {exc}"
-                )
         except Exception as exc:
             return ActionResult(
                 success=False,
@@ -271,7 +290,7 @@ class MemoryManager:
                 module="memory",
                 command=command,
                 message=f"Error ejecutando '{command}': {exc}"
-                )
+            )
 
         if isinstance(result, ActionResult):
             return result
@@ -292,12 +311,7 @@ class MemoryManager:
     # ==================================================
     def remember(self, data: dict) -> ActionResult:
         """Crea o sobreescribe una memoria. (Firma y mensajes sin cambios)."""
-        key = self._normalize(data.get("key"))
-        value = data.get("value")
-        category = self._normalize_category(data.get("category"))
-        importance = self._clamp_importance(data.get("importance", DEFAULT_IMPORTANCE))
-
-        if not self._validate_key_value(key, value):
+        if not isinstance(data, dict):
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,
@@ -306,14 +320,37 @@ class MemoryManager:
                 message="Clave o valor inválido."
             )
 
-        record = self._create_record(
+        key = self._normalize(data.get("key"))
+        value = data.get("value")
+        category = self._normalize_category(data.get("category"))
+        importance = self._clamp_importance(data.get("importance", DEFAULT_IMPORTANCE))
+
+        if not key.strip():
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="remember",
+                message="clave inválida."
+            )
+
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="memory",
+                command="remember",
+                message="valor inválido."
+            )
+
+        record = MemoryRecord(self._create_record(
             value,
             category=category,
             importance=importance,
             source=data.get("source", "user"),
             aliases=data.get("aliases"),
             tags=data.get("tags"),
-        )
+        ))
 
         with self._lock:
             existing = self.memory.get(key)
@@ -334,8 +371,18 @@ class MemoryManager:
             command="remember",
             message=f"Recordaré que tu {key} es {value}.",
             data=record
-
         )
+
+    def __getitem__(self, key: str):
+        """Compatibilidad legacy: memory['key'] devuelve el valor almacenado."""
+        record = self.memory.get(self._normalize(key))
+        if record is None:
+            raise KeyError(key)
+        return record.get("value")
+
+    def __setitem__(self, key: str, value: Any):
+        """Compatibilidad legacy: memory['key'] = value guarda el valor sin tipo record."""
+        self.remember({"key": key, "value": value})
 
     def update(self, data: dict) -> ActionResult:
         """Actualiza el valor (y opcionalmente categoría/importancia) de una memoria existente."""
@@ -389,6 +436,8 @@ class MemoryManager:
 
     def forget(self, data: dict) -> ActionResult:
         """Elimina una memoria por clave."""
+        if not isinstance(data, dict):
+            data = {}
         key = self._normalize(data.get("key"))
 
         valid_key, _ = self._validate_key(key)
@@ -398,7 +447,7 @@ class MemoryManager:
                 status=ActionStatus.ERROR,
                 module="memory",
                 command="forget",
-                message="No especificaste la memoria a eliminar."
+                message="No especificaste qué olvidar."
             )
 
         with self._lock:
@@ -427,13 +476,49 @@ class MemoryManager:
         """Alias histórico de `forget()`."""
         return self.forget(data)
 
-    def exists(self, key: str) -> bool:
+    def exists(self, key: str | dict) -> bool:
         """Indica si una clave existe en memoria (firma original preservada)."""
+        if isinstance(key, dict):
+            key = key.get("key")
         return self._normalize(key) in self.memory
 
     def get(self, key: str) -> dict | None:
         """Devuelve el registro completo de una clave, o None (firma original preservada)."""
         return self.memory.get(self._normalize(key))
+
+    def keys(self):
+        """Compatibilidad con el API legacy: devuelve las claves de memoria."""
+        return list(self.memory.keys())
+
+    def values(self):
+        """Compatibilidad con el API legacy: devuelve los valores de memoria."""
+        return [record.get("value") if isinstance(record, dict) else record for record in self.memory.values()]
+
+    def list_memories(self, data: dict | None = None) -> ActionResult:
+        """Compatibilidad legacy: devuelve un resumen simple clave->valor."""
+        serialized = {
+            key: record.get("value") if isinstance(record, dict) else record
+            for key, record in self.memory.items()
+        }
+
+        if not serialized:
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="memory",
+                command="list_memories",
+                message="La memoria está vacía.",
+                data={}
+            )
+
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="list_memories",
+            message="Memorias actuales.",
+            data=serialized
+        )
 
     def set(self, key: str, value: Any, category: str = "general", importance: int = 2) -> dict:
         """Crea/sobreescribe una memoria "en frío", sin pasar por remember() (firma original preservada)."""
@@ -448,10 +533,10 @@ class MemoryManager:
             existing = self.memory.get(key)
             if existing is not None:
                 self._index_remove(key, existing)
-            self.memory[key] = record
-            self._index_add(key, record)
+            self.memory[key] = MemoryRecord(record)
+            self._index_add(key, self.memory[key])
             self._persist()
-        return record
+        return self.memory[key]
 
     def clear(self, data: dict | None = None) -> ActionResult:
         """Elimina TODAS las memorias."""
@@ -466,7 +551,7 @@ class MemoryManager:
             status=ActionStatus.SUCCESS,
             module="memory",
             command="clear",
-            message=f"Se eliminaron {removed} memorias.",
+            message="Memoria limpiada correctamente.",
             data={"removed": removed}
         )
 
@@ -755,27 +840,110 @@ class MemoryManager:
         result.command = "search_text"
         return result
 
-    def find_by_category(self, category: str) -> dict:
-        """O(k): usa el índice invertido de categorías en vez de escanear toda la memoria."""
-        category = self._normalize_category(category)
-        keys = self._category_index.get(category, ())
-        return {key: self.memory[key] for key in keys if key in self.memory}
+    def find_by_category(self, data: dict | str | None = None) -> dict | ActionResult:
+        """
+        O(k): usa el índice invertido de categorías en vez de escanear toda la memoria.
+        
+        Acepta dos formas:
+        - Via execute(): data = {"category": "..."}
+        - Via Python directo: category_str
+        """
+        if isinstance(data, dict):
+            category = data.get("category", DEFAULT_CATEGORY)
+            category = self._normalize_category(category)
+            keys = self._category_index.get(category, ())
+            results = {key: self.memory[key] for key in keys if key in self.memory}
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="memory",
+                command="find_by_category",
+                message=f"Encontradas {len(results)} memorias en categoría '{category}'.",
+                data=results
+            )
+        else:
+            # Forma directa (compatibilidad)
+            category = self._normalize_category(data)
+            keys = self._category_index.get(category, ())
+            return {key: self.memory[key] for key in keys if key in self.memory}
 
-    def find_by_tag(self, tag: str) -> dict:
-        """O(k): usa el índice invertido de etiquetas en vez de escanear toda la memoria."""
-        tag = self._normalize(tag).lower()
-        keys = self._tag_index.get(tag, ())
-        return {key: self.memory[key] for key in keys if key in self.memory}
+    def find_by_tag(self, data: dict | str | None = None) -> dict | ActionResult:
+        """
+        O(k): usa el índice invertido de etiquetas en vez de escanear toda la memoria.
+        
+        Acepta dos formas:
+        - Via execute(): data = {"tag": "..."}
+        - Via Python directo: tag_str
+        """
+        if isinstance(data, dict):
+            tag = data.get("tag", "").strip()
+            if not tag:
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="memory",
+                    command="find_by_tag",
+                    message="No especificaste la etiqueta a buscar."
+                )
+            tag = self._normalize(tag).lower()
+            keys = self._tag_index.get(tag, ())
+            results = {key: self.memory[key] for key in keys if key in self.memory}
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="memory",
+                command="find_by_tag",
+                message=f"Encontradas {len(results)} memorias con etiqueta '{tag}'.",
+                data=results
+            )
+        else:
+            # Forma directa (compatibilidad)
+            tag = self._normalize(data or "").lower()
+            keys = self._tag_index.get(tag, ())
+            return {key: self.memory[key] for key in keys if key in self.memory}
 
-    def find_by_alias(self, alias: str) -> dict:
-        # TODO: indexar aliases igual que categoría/tags si este método se
-        # vuelve un punto caliente. Se deja como escaneo lineal porque los
-        # aliases pueden repetirse entre memorias y el comportamiento
-        # original no define una política de desambiguación explícita.
-        return {k: v for k, v in self.memory.items() if alias in v.get("aliases", [])}
+    def find_by_alias(self, data: dict | str | None = None) -> dict | ActionResult:
+        """
+        Encuentra memorias por alias.
+        
+        Acepta dos formas:
+        - Via execute(): data = {"alias": "..."}
+        - Via Python directo: alias_str
+        
+        TODO: indexar aliases igual que categoría/tags si este método se
+        vuelve un punto caliente. Se deja como escaneo lineal porque los
+        aliases pueden repetirse entre memorias y el comportamiento
+        original no define una política de desambiguación explícita.
+        """
+        if isinstance(data, dict):
+            alias = data.get("alias", "").strip()
+            if not alias:
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="memory",
+                    command="find_by_alias",
+                    message="No especificaste el alias a buscar."
+                )
+            results = {k: v for k, v in self.memory.items() if alias in v.get("aliases", [])}
+            return ActionResult(
+                success=True,
+                status=ActionStatus.SUCCESS,
+                module="memory",
+                command="find_by_alias",
+                message=f"Encontradas {len(results)} memorias con alias '{alias}'.",
+                data=results
+            )
+        else:
+            # Forma directa (compatibilidad)
+            return {k: v for k, v in self.memory.items() if (data or "") in v.get("aliases", [])}
 
-    def find_by_importance(self, data: dict | int | None = None) -> dict:
-        importance = data.get("importance") if isinstance(data, dict) else data
+    def find_by_importance(self, data: dict | None = None) -> dict:
+        """Encuentra memorias por nivel de importancia."""
+        if isinstance(data, dict):
+            importance = data.get("importance")
+        else:
+            importance = data if data is not None else DEFAULT_IMPORTANCE
         importance = self._clamp_importance(importance)
         return {k: v for k, v in self.memory.items() if v.get("importance") == importance}
 
@@ -1003,37 +1171,37 @@ class MemoryManager:
         return round(score, 3)
 
     def rank_memories(self, data: dict) -> ActionResult:
-            """Ordena todas las memorias por relevancia respecto a un texto dado."""
-            text = data.get("text", "") if isinstance(data, dict) else str(data or "")
-            limit = data.get("limit", DEFAULT_FIND_LIMIT) if isinstance(data, dict) else DEFAULT_FIND_LIMIT
+        """Ordena todas las memorias por relevancia respecto a un texto dado."""
+        text = data.get("text", "") if isinstance(data, dict) else str(data or "")
+        limit = data.get("limit", DEFAULT_FIND_LIMIT) if isinstance(data, dict) else DEFAULT_FIND_LIMIT
 
-            if not text:
-                return ActionResult(
-                    success=True,
-                    status=ActionStatus.SUCCESS,
-                    module="memory",
-                    command="rank_memories",
-                    message="Memorias ordenadas por relevancia.",
-                    data=[]
-                )
-
-            scored = (
-                (key, self.score_relevance(key, text), record)
-                for key, record in self.memory.items()
-            )
-            relevant = [item for item in scored if item[1] > 0]
-            relevant.sort(key=lambda item: item[1], reverse=True)
-
-            # Limitar resultados y devolver
-            top = relevant[:limit]
+        if not text:
             return ActionResult(
                 success=True,
                 status=ActionStatus.SUCCESS,
                 module="memory",
                 command="rank_memories",
-                message=f"Memorias ordenadas por relevancia respecto a '{text}'.",
-                data=top    
+                message="Memorias ordenadas por relevancia.",
+                data=[]
             )
+
+        scored = (
+            (key, self.score_relevance(key, text), record)
+            for key, record in self.memory.items()
+        )
+        relevant = [item for item in scored if item[1] > 0]
+        relevant.sort(key=lambda item: item[1], reverse=True)
+
+        # Limitar resultados y devolver
+        top = relevant[:limit]
+        return ActionResult(
+            success=True,
+            status=ActionStatus.SUCCESS,
+            module="memory",
+            command="rank_memories",
+            message=f"Memorias ordenadas por relevancia respecto a '{text}'.",
+            data=top
+        )
 
 
     def suggest_memories(self, text: str = "", context: dict | None = None) -> ActionResult:
@@ -1372,11 +1540,21 @@ class MemoryManager:
         Helper interno usado por todas las operaciones estructurales
         (remember/update/forget/rename/duplicate/merge/set/clear/...).
 
-        Persistencia diferida (opción B): únicamente marca la memoria
-        como "dirty". El volcado real a disco ocurre en `save()`,
-        `sync()`, `export()` o `autosave()`.
+        Siempre marca la memoria como "dirty". Además, si
+        `autosave_enabled` es True (valor por defecto), fuerza el volcado
+        inmediato a disco llamando a `save()`, que es el comportamiento
+        legado documentado en el módulo. Si `autosave_enabled` es False,
+        solo queda marcada como dirty y el volcado real se difiere hasta
+        `save()`, `sync()`, `export()` o `autosave()`.
+
+        FIX: antes esta función solo llamaba a `mark_dirty()` sin revisar
+        `autosave_enabled`, por lo que incluso con el valor por defecto
+        (True) las operaciones estructurales dejaban de escribirse a
+        disco de inmediato, contradiciendo el comportamiento documentado.
         """
         self.mark_dirty()
+        if self.autosave_enabled:
+            self.save()
 
     def export(self, data: dict | None = None) -> ActionResult:
         """Exporta la memoria completa a `data/memory.json` (o a `data.path` si se indica)."""
@@ -1447,7 +1625,10 @@ class MemoryManager:
         path = (data.get("path") if data else None) or BACKUP_PATH
         contenido = self._read_storage(path)
 
-        if not contenido:
+        # FIX: se usa "is None" en vez de "not contenido" para distinguir
+        # "no existe backup" de "el backup existe pero está vacío ({})",
+        # que antes se trataban igual y provocaban un error incorrecto.
+        if contenido is None:
             return ActionResult(
                 success=False,
                 status=ActionStatus.ERROR,
@@ -1638,7 +1819,7 @@ class MemoryManager:
             raw = {"value": raw}
 
         now = self._now()
-        return {
+        normalized = {
             "id": raw.get("id") or self._generate_id(),
             "value": raw.get("value"),
             "category": self._normalize_category(raw.get("category")),
@@ -1651,6 +1832,7 @@ class MemoryManager:
             "aliases": self._normalize_tag_list(raw.get("aliases")),
             "tags": self._normalize_tag_list(raw.get("tags")),
         }
+        return MemoryRecord(normalized)
 
     def _touch(self, key: str) -> None:
         """Actualiza el último acceso de una memoria. Solo marca 'dirty' (no escribe a disco)."""
@@ -1678,12 +1860,17 @@ class MemoryManager:
                 return
 
             turns = [(key, self.memory[key]) for key in keys if key in self.memory]
+            if not turns:
+                return
+            
             turns.sort(key=lambda kv: kv[1].get("created_at") or "")
 
             excess = len(turns) - MAX_CONVERSATION_TURNS
             for key, record in turns[:excess]:
-                self.memory.pop(key, None)
-                self._index_remove(key, record)
+                # Verificar que la clave aún existe antes de remover (race condition)
+                if key in self.memory:
+                    self.memory.pop(key, None)
+                    self._index_remove(key, record)
 
             self._persist()
 

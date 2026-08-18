@@ -13,6 +13,7 @@ from app.core.memory_manager import MemoryManager
 from app.core.knowledge_manager import KnowledgeManager
 from app.core.context_manager import ContextManager
 from app.core.task_executor import TaskExecutor
+from app.core.project_memory_integration import ProjectMemoryIntegration
 from app.service.system_manager import SystemManager
 
 
@@ -41,6 +42,9 @@ class ConversationManager:
         self.knowledge = knowledge or KnowledgeManager()
         self.context = context or ContextManager()
         self.task_executor = task_executor
+
+        # Inicializar integración de proyectos
+        self.project_memory = ProjectMemoryIntegration(self.memory)
 
         # ==================================================
         # Cargar los JSON externos
@@ -86,7 +90,7 @@ class ConversationManager:
 
         logger.info(
             "[ConversationManager] Inicializado correctamente "
-            "con intents y responses."
+            "con intents, responses y project memory integration."
         )
 
     # ==================================================
@@ -162,36 +166,18 @@ class ConversationManager:
         )
 
         # ==================================================
-        # 3. Detectar proyecto mencionado en conversación
+        # 3. NUEVO: Auto-guardar proyectos detectados
         # ==================================================
-
-        if (
-            "proyecto" in message.lower()
-            and (
-                "llamado" in message.lower()
-                or "se llama" in message.lower()
+        # Ejecuta RuleEngine para detectar y guardar automáticamente
+        # proyectos mencionados en la conversación.
+        # Ejemplo: "mi proyecto es SIRLUCAS" → auto-guardado en memory.json
+        
+        project_save_result = self.project_memory.auto_save_project(message)
+        
+        if project_save_result and project_save_result.success:
+            logger.info(
+                f"[ConversationManager] Proyecto auto-guardado: {project_save_result.message}"
             )
-        ):
-
-            import re
-
-            match = re.search(
-                r"(llamado|se llama)\s+([A-Za-z0-9_-]+)",
-                message,
-                re.IGNORECASE
-            )
-
-            if match:
-                nombre = match.group(2).strip()
-
-                self.memory.remember(
-                    {
-                        "key": "project_name",
-                        "value": nombre,
-                        "category": "general",
-                        "importance": 3,
-                    }
-                )
 
         # ==================================================
         # 4. Resolver respuesta

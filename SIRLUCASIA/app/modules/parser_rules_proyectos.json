@@ -1,0 +1,210 @@
+[
+  {
+    "name": "guardar_proyecto",
+    "module": "memory",
+    "priority": 3,
+    "regex": [
+      "^mi proyecto es (.+)$",
+      "^mi proyecto actual es (.+)$",
+      "^trabajo en (.+)$",
+      "^trabajo en el proyecto (.+)$",
+      "^mi proyecto se llama (.+)$",
+      "^el proyecto se llama (.+)$",
+      "^estoy trabajando en (.+)$",
+      "^estoy desarrollando (.+)$",
+      "^el nombre de mi proyecto es (.+)$",
+      "^el proyecto es (.+)$",
+      "^proyecto llamado (.+)$",
+      "^proyecto: (.+)$",
+      "^proyecto (.+)$"
+    ],
+    "command": "remember_project",
+    "project_name_group": 1
+  },
+  {
+    "name": "guardar_proyecto_con_descripcion",
+    "module": "memory",
+    "priority": 4,
+    "regex": [
+      "^mi proyecto es (.+) - (.+)$",
+      "^mi proyecto es (.+)  descripcion: (.+)$",
+      "^estoy trabajando en (.+) que es (.+)$",
+      "^estoy trabajando en (.+), (.+)$",
+      "^proyecto: (.+) - (.+)$",
+      "^proyecto (.+) descripcion (.+)$",
+      "^desarrollo (.+) que es (.+)$"
+    ],
+    "command": "remember_project_description",
+    "project_name_group": 1,
+    "description_group": 2
+  },
+  {
+    "name": "recordar_proyecto",
+    "module": "memory",
+    "priority": 3,
+    "regex": [
+      "^cual es mi proyecto$",
+      "^cuál es mi proyecto$",
+      "^¿cual es mi proyecto\\??$",
+      "^¿cuál es mi proyecto\\??$",
+      "^cual es el proyecto actual$",
+      "^en que proyecto trabajo$",
+      "^¿en qué proyecto trabajo\\??$",
+      "^que proyecto tengo$",
+      "^qué proyecto tengo$",
+      "^¿que proyecto tengo\\??$",
+      "^¿qué proyecto tengo\\??$",
+      "^dime mi proyecto$",
+      "^cual era mi proyecto$",
+      "^cuál era mi proyecto$",
+      "^recuerda mi proyecto$",
+      "^cual es el nombre de mi proyecto$",
+      "^cuál es el nombre de mi proyecto$",
+      "^proyecto actual$"
+    ],
+    "command": "recall_project"
+  },
+  {
+    "name": "actualizar_proyecto",
+    "module": "memory",
+    "priority": 3,
+    "regex": [
+      "^cambio mi proyecto a (.+)$",
+      "^cambio de proyecto a (.+)$",
+      "^ahora trabajo en (.+)$",
+      "^cambio el proyecto a (.+)$",
+      "^actualiza mi proyecto a (.+)$",
+      "^mi nuevo proyecto es (.+)$",
+      "^cambio mi proyecto actual a (.+)$",
+      "^deja de ser (.+) ahora es (.+)$"
+    ],
+    "command": "update_project",
+    "project_name_group": 1
+  },
+  {
+    "name": "detalles_proyecto",
+    "module": "memory",
+    "priority": 3,
+    "regex": [
+      "^dame detalles del proyecto$",
+      "^dame mas info del proyecto$",
+      "^dame más info del proyecto$",
+      "^que sabes del proyecto$",
+      "^qué sabes del proyecto$",
+      "^informacion del proyecto$",
+      "^información del proyecto$",
+      "^detalles proyecto$",
+      "^cuales son los detalles$",
+      "^cuáles son los detalles$",
+      "^cuéntame sobre el proyecto$",
+      "^cuéntame del proyecto$",
+      "^describe el proyecto$"
+    ],
+    "command": "get_project_details"
+  },
+  {
+    "name": "listar_proyectos",
+    "module": "memory",
+    "priority": 3,
+    "regex": [
+      "^lista mis proyectos$",
+      "^listar mis proyectos$",
+      "^cuantos proyectos tengo$",
+      "^cuántos proyectos tengo$",
+      "^¿cuantos proyectos tengo\\??$",
+      "^¿cuántos proyectos tengo\\??$",
+      "^muestrame mis proyectos$",
+      "^muéstrame mis proyectos$",
+      "^todos mis proyectos$",
+      "^que proyectos conozco$",
+      "^qué proyectos conozco$",
+      "^mis proyectos$",
+      "^lista de proyectos$"
+    ],
+    "command": "list_projects"
+  },
+  {
+    "name": "buscar_proyecto",
+    "module": "memory",
+    "priority": 3,
+    "regex": [
+      "^busca el proyecto (.+)$",
+      "^buscar el proyecto (.+)$",
+      "^encuentra el proyecto (.+)$",
+      "^hay un proyecto llamado (.+)$",
+      "^¿hay un proyecto llamado (.+)\\??$",
+      "^recuerdas el proyecto (.+)$",
+      "^¿recuerdas el proyecto (.+)\\??$",
+      "^existe el proyecto (.+)$",
+      "^¿existe el proyecto (.+)\\??$",
+      "^info del proyecto (.+)$",
+      "^detalles de (.+)$"
+    ],
+    "command": "search_project",
+    "project_name_group": 1
+  },
+  {
+    "name": "olvidar_proyecto",
+    "module": "memory",
+    "priority": 3,
+    "regex": [
+      "^olvida el proyecto (.+)$",
+      "^olvida mi proyecto (.+)$",
+      "^elimina el proyecto (.+)$",
+      "^borra el proyecto (.+)$",
+      "^no quiero recordar el proyecto (.+)$",
+      "^deja de recordar (.+)$",
+      "^olvida que trabajaba en (.+)$"
+    ],
+    "command": "forget_project",
+    "project_name_group": 1
+  },
+  {
+    "name": "crear_proyecto_nuevo",
+    "module": "memory",
+    "priority": 3,
+    "regex": [
+      "^crea un proyecto llamado (.+)$",
+      "^crear un proyecto llamado (.+)$",
+      "^nuevo proyecto (.+)$",
+      "^nuevo proyecto llamado (.+)$",
+      "^inicia un proyecto (.+)$",
+      "^comenzo un proyecto (.+)$",
+      "^comencé un proyecto (.+)$",
+      "^genero un proyecto llamado (.+)$",
+      "^genero proyecto (.+)$"
+    ],
+    "command": "create_project",
+    "project_name_group": 1
+  },
+  {
+    "name": "proyecto_guardado",
+    "module": "memory",
+    "priority": 5,
+    "regex": [
+      "^proyecto guardado$",
+      "^proyecto memorizado$",
+      "^proyecto recordado$",
+      "^archivo guardado$",
+      "^guardado exitosamente$",
+      "^proyecto actualizado$"
+    ],
+    "command": "confirm_save",
+    "action": "save_project"
+  },
+  {
+    "name": "agregar_detalle_proyecto",
+    "module": "memory",
+    "priority": 2,
+    "regex": [
+      "^agrega a mi proyecto (.+)$",
+      "^añade a mi proyecto (.+)$",
+      "^mi proyecto tambien (.+)$",
+      "^mi proyecto también (.+)$",
+      "^el proyecto tambien (.+)$",
+      "^el proyecto también (.+)$"
+    ],
+    "command": "add_project_detail",
+    "detail_group": 1
+  }
+]

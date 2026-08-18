@@ -16,10 +16,28 @@ class Router:
 
     def __init__(self):
         self.modules = {}
+        self.extension_registry = {}
 
     def register(self, name, module):
-        self.modules[name.lower()] = module
-        logger.info("[Router] Módulo registrado -> %s", name.lower())
+        key = (name or "").lower()
+        self.modules[key] = module
+        self.extension_registry[key] = module
+        logger.info("[Router] Módulo registrado -> %s", key)
+        return module
+
+    def register_module(self, name, module):
+        """Extensión ligera para añadir módulos nuevos sin reescribir rutas."""
+        return self.register(name, module)
+
+    def register_extension(self, name, module):
+        """Alias compatible para registrar extensiones externas."""
+        return self.register(name, module)
+
+    def unregister(self, name):
+        key = (name or "").lower()
+        self.modules.pop(key, None)
+        self.extension_registry.pop(key, None)
+        return True
 
     def route(self, data):
 

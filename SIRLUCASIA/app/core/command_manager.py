@@ -41,6 +41,30 @@ class CommandManager:
             }
         }
 
+    def register_command(self, name, handler, description=None, usage=None):
+        """Extensión ligera para registrar comandos nuevos sin refactorizar."""
+        if not callable(handler):
+            raise TypeError("El handler de un comando debe ser invocable.")
+
+        key = (name or "").lower()
+        self.commands[key] = handler
+
+        if description is not None or usage is not None:
+            self.command_info[key] = {
+                "description": description or "Comando personalizado.",
+                "usage": usage or key
+            }
+
+        return handler
+
+    def register(self, name, handler, description=None, usage=None):
+        """Alias compatible para registrar nuevos comandos externos."""
+        return self.register_command(name, handler, description, usage)
+
+    def register_extension(self, name, handler, description=None, usage=None):
+        """Compatibilidad para extensiones futuras del proyecto."""
+        return self.register_command(name, handler, description, usage)
+
     def execute(self, data):
         command = data.get("command") if isinstance(data, dict) else None
         handler = self.commands.get(command)
