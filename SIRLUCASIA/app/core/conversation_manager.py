@@ -13,6 +13,7 @@ from app.core.memory_manager import MemoryManager
 from app.core.knowledge_manager import KnowledgeManager
 from app.core.context_manager import ContextManager
 from app.core.task_executor import TaskExecutor
+from app.modules.project_memory_handler import ProjectMemoryHandler
 from app.service.system_manager import SystemManager
 
 
@@ -66,8 +67,10 @@ class ConversationManager:
         # ya produjo Parser/RuleEngine (ver _handle_project_action).
         # NO carga reglas ni crea su propio RuleEngine: eso ya lo hace
         # Parser una única vez, combinando parser_rules.json y
-        # parser_rules_proyectos.json.
-        
+        # parser_rules_proyectos.json. Se le pasa self.memory (la misma
+        # instancia) para que todo el turno persista sobre un único
+        # MemoryManager.
+        self.project_memory_handler = ProjectMemoryHandler(self.memory)
 
         # ==================================================
         # Cargar los JSON externos
@@ -158,9 +161,13 @@ class ConversationManager:
 
             1. Lee el contexto actual.
             2. Consulta memorias relevantes.
-            3. Delega la acción de proyecto (si aplica) a
-               ProjectMemoryHandler, usando el resultado de Parser.
-            4. Resuelve la respuesta.
+            3. Si el resultado de Parser es una acción de proyecto,
+               ProjectMemoryHandler la resuelve por completo y su
+               ActionResult se convierte directamente en la respuesta
+               del turno (no sigue el camino de _resolve_response()).
+            4. Si NO es una acción de proyecto, resuelve la respuesta
+               normalmente (responses.json / intents.json / SystemManager
+               / TaskExecutor / KnowledgeManager).
             5. Persiste contexto y memoria del turno.
             6. Guarda los cambios pendientes de memoria UNA SOLA VEZ.
 
@@ -202,25 +209,40 @@ class ConversationManager:
         # ==================================================
         # Reutiliza `data` (ya parseado por Parser/RuleEngine) en vez de
         # volver a correr un RuleEngine sobre `message`.
+        #
+        # Si es una acción de proyecto, ProjectMemoryHandler ya la
+        # resolvió por completo (guardó/actualizó/recuperó el proyecto
+        # vía MemoryManager). Su ActionResult ES la respuesta final del
+        # turno: NO debe seguir cayendo en _resolve_response(), que
+        # enrutaría "memory"/"create_project" (y comandos similares)
+        # hacia TaskExecutor, el cual espera una lista de Action y no
+        # sabe interpretar un dict de regla de memoria.
+        #
         # Ejemplo: "mi proyecto es SIRLUCAS" → auto-guardado en memory.json
 
         project_save_result = self._handle_project_action(data)
 
-        if project_save_result and project_save_result.success:
-            logger.info(
-                f"[ConversationManager] Proyecto auto-guardado: {project_save_result.message}"
+        if project_save_result is not None:
+
+            if project_save_result.success:
+                logger.info(
+                    f"[ConversationManager] Proyecto auto-guardado: {project_save_result.message}"
+                )
+
+            response = project_save_result
+
+        else:
+
+            # ==================================================
+            # 4. Resolver respuesta (flujo normal, sin proyecto)
+            # ==================================================
+
+            response = self._resolve_response(
+                message,
+                context_snapshot,
+                memory_hits,
+                data
             )
-
-        # ==================================================
-        # 4. Resolver respuesta
-        # ==================================================
-
-        response = self._resolve_response(
-            message,
-            context_snapshot,
-            memory_hits,
-            data
-        )
 
         # ==================================================
         # 5. Persistir contexto y memoria del turno
@@ -495,6 +517,9 @@ class ConversationManager:
         ProjectMemoryIntegration, sin volver a ejecutar un RuleEngine
         duplicado: se reutiliza el resultado que Parser ya produjo para
         este mismo mensaje.
+
+        Devuelve None si el mensaje no correspondía a una acción de
+        proyecto (para que process() siga el flujo normal).
         """
 
         if not isinstance(rule_result, dict):
