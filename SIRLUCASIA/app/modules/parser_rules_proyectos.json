@@ -16,6 +16,11 @@
       "^el proyecto es (.+)$",
       "^proyecto llamado (.+)$",
       "^proyecto: (.+)$",
+      "^tengo un proyecto llamado (.+?)\\s*(?:gu[aá]rdalo|por favor)?$",
+      "^tengo un proyecto (.+?)\\s*(?:gu[aá]rdalo|por favor)?$",
+      "^tengo un nuevo proyecto llamado (.+?)\\s*(?:gu[aá]rdalo|por favor)?$",
+      "^registra mi proyecto (.+?)\\s*(?:gu[aá]rdalo|por favor)?$",
+      "^guarda mi proyecto (.+?)\\s*(?:gu[aá]rdalo|por favor)?$",
       "^proyecto (.+)$"
     ],
     "command": "remember_project",
@@ -30,6 +35,8 @@
       "^mi proyecto es (.+)  descripcion: (.+)$",
       "^estoy trabajando en (.+) que es (.+)$",
       "^estoy trabajando en (.+), (.+)$",
+      "^trabajo en (.+) que es (.+)$",
+      "^trabajo en (.+), (.+)$",
       "^proyecto: (.+) - (.+)$",
       "^proyecto (.+) descripcion (.+)$",
       "^desarrollo (.+) que es (.+)$"
@@ -60,6 +67,12 @@
       "^recuerda mi proyecto$",
       "^cual es el nombre de mi proyecto$",
       "^cuál es el nombre de mi proyecto$",
+      "^como se llama mi proyecto$",
+      "^cómo se llama mi proyecto$",
+      "^como se llama el proyecto$",
+      "^cómo se llama el proyecto$",
+      "^cual es el proyecto$",
+      "^cuál es el proyecto$",
       "^proyecto actual$"
     ],
     "command": "recall_project"

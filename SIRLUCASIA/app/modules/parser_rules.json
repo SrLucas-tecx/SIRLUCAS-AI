@@ -644,19 +644,25 @@
     "format": "pptx",
     "topic_group": 1
   },
-  {
+    {
     "name": "conversacion",
     "module": "conversation",
     "priority": 100,
     "regex": [
       "^hola+$",
+      "^hola+\\s+.+$",
       "^holi$",
+      "^holi\\s+.+$",
       "^hello$",
+      "^hello\\s+.+$",
       "^hi$",
+      "^hi\\s+.+$",
       "^hey$",
+      "^hey\\s+.+$",
       "^buen dia$",
       "^buenos dias$",
       "^buenas$",
+      "^buenas\\s+.+$",
       "^buenas tardes$",
       "^buenas noches$",
       "^que onda$",
