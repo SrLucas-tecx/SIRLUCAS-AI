@@ -86,6 +86,15 @@ class ContextManager:
         self.stack = ContextStack(max_size=max_stack_size)
         self.clear()
 
+    def has_program(self):
+        return self.current_program is not None
+
+    def has_document(self):
+        return self.current_document is not None
+
+    def has_search(self):
+        return self.current_search is not None
+
     # ==========================================
     # Reinicio TOTAL
     # Borra pilas, historial, variables y entidades.

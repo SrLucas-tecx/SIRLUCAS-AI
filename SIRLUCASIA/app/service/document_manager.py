@@ -31,6 +31,11 @@ def _is_valid_name(name):
 
 class DocumentManager:
 
+    COMMANDS = frozenset({
+        "create", "read", "write", "delete", "rename", "copy", "move",
+        "list_documents", "info", "search", "modified", "exists",
+    })
+
     def __init__(self):
         self.database = DocumentDatabase()
         self.path = "documents"
@@ -68,7 +73,15 @@ class DocumentManager:
     # Router
     # ==================================================
     def execute(self, data):
-        command = data.get("command")
+        command = data.get("command") if isinstance(data, dict) else None
+        if command not in self.COMMANDS:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command=command,
+                message=f"No existe la acción '{command}'."
+            )
         method = getattr(self, command, None)
 
         if method is None:
@@ -189,10 +202,7 @@ class DocumentManager:
                 status=ActionStatus.ERROR,
                 module="document",
                 command="read",
-                message="No encontré ese documento.",
-                error=str(e)
-                
-                
+                message="No encontré ese documento."
             )
 
         try:
@@ -350,6 +360,15 @@ class DocumentManager:
         old_name = data.get("old_name") or data.get("topic")
         new_name = data.get("new_name")
 
+        if not _is_valid_name(new_name):
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="rename",
+                message="El nuevo nombre del documento es inválido."
+            )
+
         filepath, extension = self._get_document(old_name)
 
         if filepath is None:
@@ -410,6 +429,15 @@ class DocumentManager:
         old_name = data.get("old_name")
         new_name = data.get("new_name")
 
+        if not _is_valid_name(new_name):
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="copy",
+                message="El nuevo nombre del documento es inválido."
+            )
+
         filepath, extension = self._get_document(old_name)
         if filepath is None:
             return ActionResult(
@@ -464,8 +492,38 @@ class DocumentManager:
                 message="No encontré ese documento."
             )
 
+        if not isinstance(new_path, str) or not new_path.strip():
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="move",
+                message="No especificaste una carpeta de destino."
+            )
+
+        documents_root = os.path.abspath(self.path)
+        destination = os.path.abspath(new_path)
         try:
-            shutil.move(filepath, new_path)
+            if os.path.commonpath((documents_root, destination)) != documents_root:
+                return ActionResult(
+                    success=False,
+                    status=ActionStatus.ERROR,
+                    module="document",
+                    command="move",
+                    message="La carpeta de destino debe estar dentro de documents."
+                )
+        except ValueError:
+            return ActionResult(
+                success=False,
+                status=ActionStatus.ERROR,
+                module="document",
+                command="move",
+                message="La carpeta de destino es inválida."
+            )
+
+        try:
+            os.makedirs(destination, exist_ok=True)
+            shutil.move(filepath, destination)
             return ActionResult(
                 success=True,
                 status=ActionStatus.SUCCESS,

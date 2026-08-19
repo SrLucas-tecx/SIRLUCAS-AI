@@ -25,9 +25,23 @@ from app.listeners.ai_listener import AIListener
 from app.IA.ai_router import AIRouter
 from app.IA.context_builder import ContextBuilder
 from app.IA.response_wrapper_1 import ResponseWrapper
+from app.modules.project_memory_handler import ProjectMemoryHandler
 
 
 class Assistant:
+
+    PROJECT_MEMORY_COMMANDS = frozenset({
+        "remember_project",
+        "remember_project_description",
+        "recall_project",
+        "update_project",
+        "get_project_details",
+        "list_projects",
+        "search_project",
+        "forget_project",
+        "create_project",
+        "add_project_detail",
+    })
 
     def __init__(self):
         self.name = "SIRLUCAS AI"
@@ -47,7 +61,7 @@ class Assistant:
         #self.memory.remember_project("Silukitas")
 
         # Router determinista
-        self.router = Router()
+        self.router = Router(context_manager=self.context)
         self.router.register("memory", self.memory)
         self.router.register("knowledge", self.knowledge)
         self.router.register("web", self.web)
@@ -108,6 +122,10 @@ class Assistant:
         self.ai_router = AIRouter()
         self.context_builder = ContextBuilder()
         self.response_wrapper = ResponseWrapper()
+        # Alias de compatibilidad para integraciones que formatean el
+        # resultado determinista directamente.
+        self.response_formatter = self.response_wrapper.formatter
+        self.project_memory_handler = ProjectMemoryHandler(self.memory)
 
     def start(self):
         self.show_banner()
@@ -154,9 +172,23 @@ class Assistant:
 
             module = message.get("module")
             rule = message.get("rule")
+            command = message.get("command")
+
+            # Reglas de proyectos → memoria persistente. Estos comandos
+            # se resuelven por su handler especializado y no por el
+            # dispatcher genérico de memoria.
+            if (
+                module == "memory"
+                and command in self.PROJECT_MEMORY_COMMANDS
+            ):
+                result = self.project_memory_handler.handle_rule(message)
+                response = self.response_wrapper.wrap(
+                    result,
+                    source="deterministic"
+                )
 
             # Conversación → Ollama
-            if module == "conversation":
+            elif module == "conversation":
                 context = self.context_builder.build(
                     self.context,
                     self.memory

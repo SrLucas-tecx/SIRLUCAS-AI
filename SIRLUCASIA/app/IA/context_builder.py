@@ -7,7 +7,9 @@ class ContextBuilder:
     - Integra memoria relevante desde MemoryManager.
     """
 
-    MAX_HISTORY = 8
+    MAX_HISTORY = 4
+    MAX_MEMORIES = 5
+    MAX_MEMORY_CHARS = 500
 
     def build(self, context_manager, memory_manager=None):
 
@@ -64,7 +66,7 @@ class ContextBuilder:
                 )
 
                 if relevant:
-                    context["memory"] = relevant
+                    context["memory"] = self._limit_memories(relevant)
 
             except AttributeError:
                 # MemoryManager todavía no tiene
@@ -77,3 +79,11 @@ class ContextBuilder:
                 )
 
         return context
+
+    def _limit_memories(self, memories):
+        """Recorta el contexto de memoria para reducir tokens y latencia."""
+        if isinstance(memories, dict):
+            memories = list(memories.values())
+        if not isinstance(memories, (list, tuple)):
+            return []
+        return [str(memory)[:self.MAX_MEMORY_CHARS] for memory in memories[:self.MAX_MEMORIES]]

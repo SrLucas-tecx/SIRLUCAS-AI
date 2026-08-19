@@ -52,6 +52,8 @@ class SystemCommand(StrEnum):
     CLOSE = "close"
     RESTART = "restart"
     IS_OPEN = "is_open"
+    TIME = "time"
+    DATE = "date"
     
 
 
@@ -359,8 +361,14 @@ class SystemManager:
             return False
 
 
-    def is_open(self, data: dict) -> ActionResult:   # 🔧 CORREGIDO: ahora devuelve ActionResult
-        app = data.get("topic")
+    def is_open(self, data: dict | str) -> ActionResult | bool:
+        # Compatibilidad: las llamadas directas históricas reciben un
+        # string y devuelven bool; el dispatcher recibe un dict y usa
+        # ActionResult como el resto de comandos.
+        if isinstance(data, str):
+            return self._is_open_bool(data)
+
+        app = data.get("topic") if isinstance(data, dict) else None
         if not app:
             return self._error("is_open", "No especificaste qué aplicación consultar.")
 
@@ -368,6 +376,14 @@ class SystemManager:
             return self._success("is_open", f"{app} está abierto.")
         else:
             return self._success("is_open", f"{app} no está abierto.")
+
+    def time(self, data: dict) -> ActionResult:
+        current = datetime.now().strftime("%H:%M:%S")
+        return self._success("time", f"La hora actual es {current}.", data={"time": current})
+
+    def date(self, data: dict) -> ActionResult:
+        current = datetime.now().date().isoformat()
+        return self._success("date", f"La fecha de hoy es {current}.", data={"date": current})
 
 
     # ==================================================
@@ -408,4 +424,3 @@ class SystemManager:
             return self._close_tracked(app, program, tracked)
         return self._close_by_name(app, program)
 
-    

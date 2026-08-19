@@ -37,6 +37,18 @@ class ProjectMemoryHandler:
         """
         self.memory = memory_manager
         self.logger = logger
+
+    def _project_records(self):
+        """Devuelve los registros de proyecto sin depender de su contenedor."""
+        result = self.memory.find_by_category({"category": "projects"})
+        if not isinstance(result, ActionResult) or not result.success:
+            return []
+        data = result.data
+        if isinstance(data, dict):
+            return list(data.values())
+        if isinstance(data, list):
+            return data
+        return []
     
     # ==========================================================
     # HANDLERS DE REGLAS (mapean RuleEngine results → memory)
@@ -54,7 +66,7 @@ class ProjectMemoryHandler:
             ActionResult con éxito/error del guardado
         """
         
-        if not rule_result or rule_result.get("module") != "memory":
+        if not rule_result or rule_result.get("module") not in (None, "memory"):
             return None
         
         command = rule_result.get("command")
@@ -147,9 +159,9 @@ class ProjectMemoryHandler:
         """
         
         # Busca memorias con categoría "projects" o alias "mi proyecto"
-        projects = self.memory.find_by_category({"category": "projects", "limit": 1})
-        
-        if not projects or not projects.data:
+        projects = self._project_records()
+
+        if not projects:
             return ActionResult(
                 success=False,
                 status=ActionStatus.WARNING,
@@ -157,7 +169,8 @@ class ProjectMemoryHandler:
                 message="No hay ningún proyecto guardado en memoria."
             )
         
-        project_data = projects.data[0] if isinstance(projects.data, list) else projects.data
+        record = projects[0]
+        project_data = record.get("value", record)
         project_name = project_data.get("name", "Desconocido")
         description = project_data.get("description", "")
         
@@ -209,9 +222,9 @@ class ProjectMemoryHandler:
         Detecta: "dame detalles del proyecto"
         """
         
-        projects = self.memory.find_by_category({"category": "projects", "limit": 1})
-        
-        if not projects or not projects.data:
+        projects = self._project_records()
+
+        if not projects:
             return ActionResult(
                 success=False,
                 status=ActionStatus.WARNING,
@@ -219,7 +232,7 @@ class ProjectMemoryHandler:
                 message="No hay ningún proyecto guardado."
             )
         
-        project_data = projects.data[0] if isinstance(projects.data, list) else projects.data
+        project_data = projects[0].get("value", projects[0])
         
         details = f"""
         **Proyecto: {project_data.get('name', 'Desconocido')}**
@@ -245,9 +258,9 @@ class ProjectMemoryHandler:
         Detecta: "lista mis proyectos"
         """
         
-        projects = self.memory.find_by_category({"category": "projects", "limit": 100})
-        
-        if not projects or not projects.data:
+        projects = self._project_records()
+
+        if not projects:
             return ActionResult(
                 success=True,
                 status=ActionStatus.SUCCESS,
@@ -256,7 +269,7 @@ class ProjectMemoryHandler:
                 data=[]
             )
         
-        project_list = projects.data if isinstance(projects.data, list) else [projects.data]
+        project_list = [project.get("value", project) for project in projects]
         
         message = f"**Tienes {len(project_list)} proyecto(s) guardado(s):**\n\n"
         for i, proj in enumerate(project_list, 1):
@@ -365,9 +378,9 @@ class ProjectMemoryHandler:
             )
         
         # Recupera proyecto actual
-        projects = self.memory.find_by_category({"category": "projects", "limit": 1})
-        
-        if not projects or not projects.data:
+        projects = self._project_records()
+
+        if not projects:
             return ActionResult(
                 success=False,
                 status=ActionStatus.WARNING,
@@ -375,7 +388,7 @@ class ProjectMemoryHandler:
                 message="No hay proyecto actual para agregar detalles."
             )
         
-        project_data = projects.data[0] if isinstance(projects.data, list) else projects.data
+        project_data = projects[0].get("value", projects[0])
         current_desc = project_data.get("description", "")
         
         # Actualiza descripción

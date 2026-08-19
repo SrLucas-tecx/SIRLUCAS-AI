@@ -7,8 +7,8 @@ import os
 
 from typing import Any
 
-from SIRLUCASIA.app.core.action_result import ActionResult
-from SIRLUCASIA.app.core.action_status import ActionStatus
+from app.core.action_result import ActionResult
+from app.core.action_status import ActionStatus
 from app.core.memory_manager import MemoryManager
 from app.core.knowledge_manager import KnowledgeManager
 from app.core.context_manager import ContextManager

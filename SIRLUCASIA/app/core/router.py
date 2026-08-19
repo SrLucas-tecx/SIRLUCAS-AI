@@ -6,17 +6,18 @@ from app.core.context_manager import ContextManager
 
 logger = logging.getLogger(__name__)
 
-# Instancia global de ContextManager
-context = ContextManager()
-
 GENERIC_PRONOUNS = ("lo", "la", "los", "las", "eso", "esto", "esa", "ese", "esos", "esas")
 
 
 class Router:
 
-    def __init__(self):
+    def __init__(self, context_manager=None):
         self.modules = {}
         self.extension_registry = {}
+        # El contexto debe compartirse con el pipeline del Assistant.
+        # Una instancia global hacía que las referencias se resolvieran
+        # contra otra conversación distinta.
+        self.context = context_manager or ContextManager()
 
     def register(self, name, module):
         key = (name or "").lower()
@@ -75,7 +76,7 @@ class Router:
 
         # --- Integración con ContextManager ---
         try:
-            context.update(data)
+            self.context.update(data)
         except Exception as e:
             logger.exception("[Router] Error actualizando contexto")
             return ActionResult(
@@ -90,21 +91,21 @@ class Router:
         # --- Resolver referencias si el topic es pronombre ---
         topic = data.get("topic")
         if topic and topic.lower() in GENERIC_PRONOUNS:
-            ref = context.resolve_reference(topic)
+            ref = self.context.resolve_reference(topic)
             if ref and ref.get("value"):
                 data["topic"] = ref["value"]
                 data["entity"] = ref
 
         # --- Resolver referencias específicas de documentos ---
         if command in ("read", "rename", "delete") and topic and topic.lower() in GENERIC_PRONOUNS:
-            ref = context.resolve_reference(topic)
+            ref = self.context.resolve_reference(topic)
             if ref and ref.get("type") == "document":
                 data["topic"] = ref["value"]
                 data["entity"] = ref
 
         # --- Resolver referencias específicas de programas ---
         if command in ("close", "restart", "open") and topic and topic.lower() in GENERIC_PRONOUNS:
-            ref = context.resolve_reference(topic)
+            ref = self.context.resolve_reference(topic)
             if ref and ref.get("type") == "program":
                 data["topic"] = ref["value"]
                 data["entity"] = ref

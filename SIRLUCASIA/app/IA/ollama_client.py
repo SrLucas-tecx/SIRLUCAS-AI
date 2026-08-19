@@ -10,12 +10,19 @@ class OllamaClient:
         self,
         base_url="http://localhost:11434",
         model="llama3:latest",
-        timeout=300
+        timeout=120,
+        max_tokens=250,
+        temperature=0.4,
+        keep_alive="10m",
     ):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.keep_alive = keep_alive
         self.process = None  # referencia al proceso Ollama
+        self.session = requests.Session()
 
     def start_server(self):
         """Arranca Ollama en segundo plano si no está corriendo."""
@@ -41,7 +48,7 @@ class OllamaClient:
     def is_available(self):
         """Comprueba si el servidor de Ollama está disponible."""
         try:
-            response = requests.get(
+            response = self.session.get(
                 f"{self.base_url}/api/tags",
                 timeout=5
             )
@@ -55,13 +62,19 @@ class OllamaClient:
         payload = {
             "model": self.model,
             "prompt": prompt,
-            "stream": False
+            "stream": False,
+            "keep_alive": self.keep_alive,
+            "options": {
+                "num_predict": self.max_tokens,
+                "temperature": self.temperature,
+                "num_ctx": 2048,
+            },
         }
 
         try:
             start_time = time.time()
 
-            response = requests.post(
+            response = self.session.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
                 timeout=self.timeout

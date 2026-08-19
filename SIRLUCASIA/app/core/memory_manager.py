@@ -164,6 +164,8 @@ class MemoryManager:
         "search_text",
         "search_semantic",
         "find_by_category",
+        "list_by_category",
+        "search_by_category",
         "find_by_tag",
         "find_by_alias",
         "find_by_importance",
@@ -866,6 +868,18 @@ class MemoryManager:
             category = self._normalize_category(data)
             keys = self._category_index.get(category, ())
             return {key: self.memory[key] for key in keys if key in self.memory}
+
+    def list_by_category(self, data: dict) -> ActionResult:
+        """Alias compatible con las reglas de lenguaje natural."""
+        result = self.find_by_category(data)
+        result.command = "list_by_category"
+        return result
+
+    def search_by_category(self, data: dict) -> ActionResult:
+        """Alias compatible con las reglas de lenguaje natural."""
+        result = self.find_by_category(data)
+        result.command = "search_by_category"
+        return result
 
     def find_by_tag(self, data: dict | str | None = None) -> dict | ActionResult:
         """

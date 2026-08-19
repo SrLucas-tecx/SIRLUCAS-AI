@@ -1,95 +1,63 @@
-TODO SOBRE SIRLUCAS IA
-======================
+PLAN DE DESARROLLO — SIRLUCAS AI
+================================
 
-SIRLUCAS IA es un asistente de IA orientado a memoria, proyecto, contexto y automatización local.
+Estado actualizado: 2026-08-19
 
-1. PROPÓSITO
+MEMORIA
+-------
+[x] Memoria persistente en JSON
+[x] Guardado automático
+[x] Carga al iniciar
+[x] Selección de memoria relevante
+[x] Guardado de proyectos
+[ ] Pruebas completas: unificar pruebas heredadas con ActionResult
+[ ] Pruebas entre sesiones: automatizar con directorio temporal y reinicio real
+
+CONVERSACIÓN
 ------------
-El sistema combina:
-- memoria persistente
-- reglas textuales para interpretar comandos
-- gestión de contexto de usuario
-- tareas, documentos, archivos y sistema
-- búsqueda y recuerdo de información relevante
+[x] ConversationManager disponible
+[x] ContextManager disponible
+[x] PromptManager disponible
+[ ] Mejorar comprensión natural más allá de regex
+[ ] Mejorar referencias contextuales complejas
+[ ] Definir y ajustar personalidad de producto
 
-2. ARQUITECTURA PRINCIPAL
--------------------------
-- app/core: lógica central del asistente
-- app/modules: parsers, handlers y reglas del proyecto
-- app/service: gestión de documentos, sistema y operaciones
-- app/utils: utilidades compartidas, JSON y helper functions
-- data/: archivos de persistencia y datos del asistente
-- tests/: validaciones de componentes principales
+OLLAMA
+------
+[x] Historial limitado a 8 turnos en ContextBuilder
+[x] ContextBuilder solicita memoria relevante
+[ ] Definir límite explícito de memorias y caracteres enviados al prompt
+[ ] Ajustar parámetros de modelo y generación
+[ ] Medir tiempos por módulo
+[ ] Optimizar modelo y tiempo de respuesta
 
-3. FUNCIONALIDADES ACTUALES
----------------------------
-- Memoria persistente en JSON
-- Guardado y recuerdo de datos personales
-- Guardado y recuperación de proyectos
-- Auto-guardado cuando aparece un proyecto en una conversación
-- Búsqueda por memoria, categoría, relevancia y tags
-- Histórico de conversación
-- Gestión de documentos, archivos, documentos de texto y otros formatos
-- Interacción con sistema operativo y programas
-- Lógica basada en reglas (regex) mediante RuleEngine
-- Preparación de módulos de web, conocimiento y cálculo
+PROYECTOS
+---------
+[x] Guardar, consultar, listar y actualizar proyecto
+[x] Buscar, olvidar y añadir detalle de proyecto
+[ ] Definir proyecto activo cuando existen varios
+[ ] Prueba Assistant → Parser → ProjectMemoryHandler
 
-4. COMPONENTES DESTACADOS
--------------------------
-- MemoryManager: administrador de memoria con persistencia, índices y CRUD
-- ConversationManager: orquesta los turnos de conversación
-- RuleEngine: interpreta patrones textuales y extrae valores de grupos
-- ProjectMemoryIntegration: conecta reglas de proyecto con MemoryManager
-- ProjectMemoryHandler: ejecuta la lógica concreta de guardar/recuperar proyectos
-- JSONManager: garantiza lectura/escritura segura de JSON y manejo de directorios
+PRUEBAS
+-------
+[ ] Unificar tests que esperan listas/strings donde el código devuelve ActionResult
+[ ] Corregir ruta de test_project_auto_save.py a app/modules
+[ ] Añadir pruebas aisladas de persistencia entre sesiones
+[ ] Añadir pruebas end-to-end sin modificar data/ ni documents/
+[ ] Configurar pytest con directorios temporales
 
-5. CÓMO GUARDA UN PROYECTO
--------------------------
-Cuando el usuario escribe frases como:
-- "mi proyecto es SIRLUCAS IA"
-- "trabajo en IAGENERATOR que es un sistema de IA"
+SEGURIDAD
+---------
+[x] Calculadora sin eval()
+[x] Validación de nombres y rutas de documentos
+[x] Whitelist de comandos en MemoryManager, SystemManager y DocumentManager
+[ ] Revisar toda la ejecución de comandos de Windows
+[ ] Validar tamaño y contenido antes de enviar a Ollama
 
-el RuleEngine detecta la regla y la integración llama a MemoryManager.remember_project().
-Esto guarda el proyecto en memoria permanente con categoría projects.
-
-6. CÓMO SE RECUPERA
--------------------
-Frases como:
-- "¿cuál es mi proyecto?"
-- "lista mis proyectos"
-
-permiten consultar la información guardada.
-
-7. PERSISTENCIA
----------------
-La memoria se guarda en:
-- data/memory.json
-
-También se maneja backup asociado a:
-- data/memory_backup.json
-
-8. ESTADO ACTUAL
-----------------
-El proyecto está operativo en su parte central de memoria/proyectos.
-Se corrigieron los bloqueos reales que impedian el funcionamiento del flujo.
-
-9. MEJORAS YA APLICADAS
-----------------------
-- reparación del parser de reglas
-- validación de regex
-- corrección de serialización JSON
-- protección ante archivos corruptos
-- persistencia real de proyectos y memoria
-- verificación de flujo en chat
-
-10. MEJORAS FUTURAS RECOMENDADAS
---------------------------------
-- completar dataset de intents.json y responses.json
-- añadir más tests del flujo conversacional completo
-- mejorar la respuesta contextual de la IA
-- ampliar módulos de conocimiento y web
-- afinar las reglas de detección y predicción para frases más naturales
-
-11. CONCLUSION
---------------
-SIRLUCAS IA es un asistente con una base sólida, memoria funcional, integración de proyectos real y arquitectura modular lista para seguir ampliándose sin romper lo ya construido.
+DOCUMENTACIÓN
+-------------
+[x] README técnico actualizado
+[x] Arquitectura y memoria/proyectos documentados
+[ ] Documentar configuración de Ollama y modelos
+[ ] Documentar reglas del parser con ejemplos
+[ ] Añadir guía de contribución y ejecución de pruebas

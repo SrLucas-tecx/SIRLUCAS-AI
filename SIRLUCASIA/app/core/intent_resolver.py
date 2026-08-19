@@ -12,6 +12,8 @@ INTENT_MAP = {
     ("system", "open"): "OPEN_PROGRAM",
     ("system", "close"): "CLOSE_PROGRAM",
     ("system", "restart"): "RESTART_PROGRAM",
+    ("system", "time"): "GET_TIME",
+    ("system", "date"): "GET_DATE",
 
     # ---- document ----
     ("document", "create"): "CREATE_DOCUMENT",
@@ -26,6 +28,7 @@ INTENT_MAP = {
     ("document", "search"): "SEARCH_DOCUMENT",
     ("document", "modified"): "MODIFIED_DOCUMENT",
     ("document", "exists"): "EXISTS_DOCUMENT",
+    ("document", "list_by_format"): "LIST_DOCUMENTS_BY_FORMAT",
 
     # ---- memory ----
     ("memory", "remember"): "SAVE_MEMORY",
@@ -39,6 +42,9 @@ INTENT_MAP = {
     ("memory", "export"): "EXPORT_MEMORY",
     ("memory", "import_memories"): "IMPORT_MEMORY",
     ("memory", "clear"): "CLEAR_MEMORY",
+    ("memory", "summary"): "SUMMARY_MEMORY",
+    ("memory", "list_by_category"): "LIST_MEMORY_BY_CATEGORY",
+    ("memory", "search_by_category"): "SEARCH_MEMORY_BY_CATEGORY",
 
     # ---- history ----
     ("history", "history"): "READ_HISTORY",
