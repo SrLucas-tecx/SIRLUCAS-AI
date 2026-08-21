@@ -16,6 +16,10 @@ from app.core.task_executor import TaskExecutor
 from app.modules.project_memory_handler import ProjectMemoryHandler
 from app.service.system_manager import SystemManager
 
+# ==================================================
+# NUEVA IMPORTACIÓN
+# ==================================================
+from app.core.brain.brain_manager import BrainManager
 
 system_manager = SystemManager()
 
@@ -25,13 +29,6 @@ logger = logging.getLogger(__name__)
 class ConversationManager:
     """Orquestador puro: coordina Memoria, Conocimiento, Contexto y Ejecución de tareas."""
 
-    # ==================================================
-    # Comandos de proyecto manejados por ProjectMemoryHandler
-    # ==================================================
-    # Mismo set de comandos que ProjectMemoryHandler.handle_rule()
-    # sabe despachar. Se usa para decidir, sobre el resultado que
-    # Parser/RuleEngine ya produjo, si corresponde delegarlo al
-    # handler de proyectos (sin volver a ejecutar RuleEngine).
     PROJECT_MEMORY_COMMANDS = frozenset({
         "remember_project",
         "remember_project_description",
@@ -45,87 +42,65 @@ class ConversationManager:
         "add_project_detail",
     })
 
-    # ==================================================
-    # Inicialización
-    # ==================================================
-
     def __init__(
         self,
         memory: MemoryManager | None = None,
         knowledge: KnowledgeManager | None = None,
         context: ContextManager | None = None,
         task_executor: TaskExecutor | None = None,
+        # ==================================================
+        # NUEVA DEPENDENCIA INYECTADA
+        # ==================================================
+        brain_manager: BrainManager | None = None,
     ) -> None:
 
-        # Inyección de dependencias con defaults
         self.memory = memory or MemoryManager()
         self.knowledge = knowledge or KnowledgeManager()
         self.context = context or ContextManager()
         self.task_executor = task_executor
 
-        # Handler de proyectos: consume directamente el rule_result que
-        # ya produjo Parser/RuleEngine (ver _handle_project_action).
-        # NO carga reglas ni crea su propio RuleEngine: eso ya lo hace
-        # Parser una única vez, combinando parser_rules.json y
-        # parser_rules_proyectos.json. Se le pasa self.memory (la misma
-        # instancia) para que todo el turno persista sobre un único
-        # MemoryManager.
-        self.project_memory_handler = ProjectMemoryHandler(self.memory)
+        # ==================================================
+        # INICIALIZACIÓN DE BRAIN MANAGER
+        # ==================================================
+        # Si no se inyecta desde fuera, lo creamos pasándole las instancias actuales.
+        # ESTO DEBE ADAPTARSE A TU IMPLEMENTACIÓN ACTUAL si tienes un ContextBuilder separado.
+        self.brain_manager = brain_manager or BrainManager(
+            memory_manager=self.memory,
+            knowledge_manager=self.knowledge,
+            context_builder=self.context  
+        )
 
-        # ==================================================
-        # Cargar los JSON externos
-        # ==================================================
+        self.project_memory_handler = ProjectMemoryHandler(self.memory)
 
         base_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "..",
             "data"
         )
-
         base_path = os.path.abspath(base_path)
 
         try:
-            with open(
-                os.path.join(base_path, "intents.json"),
-                "r",
-                encoding="utf-8"
-            ) as f:
+            with open(os.path.join(base_path, "intents.json"), "r", encoding="utf-8") as f:
                 self.intents = json.load(f)
-
         except FileNotFoundError:
-            logger.warning(
-                "[ConversationManager] No se encontró "
-                "'intents.json'. Se usarán valores por defecto."
-            )
+            logger.warning("[ConversationManager] No se encontró 'intents.json'.")
             self.intents = {}
 
         try:
-            with open(
-                os.path.join(base_path, "responses.json"),
-                "r",
-                encoding="utf-8"
-            ) as f:
+            with open(os.path.join(base_path, "responses.json"), "r", encoding="utf-8") as f:
                 self.responses = json.load(f)
-
         except FileNotFoundError:
-            logger.warning(
-                "[ConversationManager] No se encontró "
-                "'responses.json'. Se usarán valores por defecto."
-            )
+            logger.warning("[ConversationManager] No se encontró 'responses.json'.")
             self.responses = {}
 
         logger.info(
             "[ConversationManager] Inicializado correctamente "
-            "con intents, responses y project memory handler."
+            "con intents, responses, project memory y BrainManager."
         )
 
-    # ==================================================
-    # Dispatcher
-    # ==================================================
-
     def execute(self, data: dict) -> Any:
+        # ... (Mantienes tu código intacto) ...
         command = data.get("command")
-
         method = getattr(self, command, None)
 
         if method is None:
@@ -135,47 +110,11 @@ class ConversationManager:
                 module="conversation",
                 command=command,
                 message=f"No existe el comando '{command}'.",
-                error=(
-                    f"Comando '{command}' no implementado "
-                    "en ConversationManager."
-                ),
+                error=f"Comando '{command}' no implementado en ConversationManager.",
             )
-
         return method(data)
 
-    # ==================================================
-    # Punto de entrada principal de un turno
-    # ==================================================
-
     def process(self, data: dict) -> Any:
-        """
-        Orquesta un turno de conversación completo.
-
-        `data` es el resultado que ya produjo Parser.parse(message,
-        context) (contiene, entre otros, "message"/"topic", "module",
-        "command", "rule" y, si aplica, "project_name"). ConversationManager
-        NO vuelve a ejecutar ningún RuleEngine: reutiliza este resultado
-        para todo, incluida la detección de acciones de proyecto.
-
-        Orden:
-
-            1. Lee el contexto actual.
-            2. Consulta memorias relevantes.
-            3. Si el resultado de Parser es una acción de proyecto,
-               ProjectMemoryHandler la resuelve por completo y su
-               ActionResult se convierte directamente en la respuesta
-               del turno (no sigue el camino de _resolve_response()).
-            4. Si NO es una acción de proyecto, resuelve la respuesta
-               normalmente (responses.json / intents.json / SystemManager
-               / TaskExecutor / KnowledgeManager).
-            5. Persiste contexto y memoria del turno.
-            6. Guarda los cambios pendientes de memoria UNA SOLA VEZ.
-
-        La persistencia de memoria utiliza dirty flag:
-        las operaciones internas modifican RAM y marcan la memoria
-        como dirty; el guardado físico se realiza al terminar el turno.
-        """
-
         message = data.get("message") or data.get("topic")
 
         if not message:
@@ -188,97 +127,58 @@ class ConversationManager:
                 error="El campo 'message' es obligatorio.",
             )
 
-        # ==================================================
         # 1. Snapshot del contexto
-        # ==================================================
-
         context_snapshot = self._get_context_snapshot()
 
         # ==================================================
-        # 2. Consultar memorias relevantes
+        # 2. Acciones de proyecto (deterministas)
         # ==================================================
-
-        memory_hits = self._consult_memory(
-            message,
-            context_snapshot
-        )
-
-        # ==================================================
-        # 3. Acciones de proyecto (si el resultado de Parser
-        #    corresponde a una de ellas)
-        # ==================================================
-        # Reutiliza `data` (ya parseado por Parser/RuleEngine) en vez de
-        # volver a correr un RuleEngine sobre `message`.
-        #
-        # Si es una acción de proyecto, ProjectMemoryHandler ya la
-        # resolvió por completo (guardó/actualizó/recuperó el proyecto
-        # vía MemoryManager). Su ActionResult ES la respuesta final del
-        # turno: NO debe seguir cayendo en _resolve_response(), que
-        # enrutaría "memory"/"create_project" (y comandos similares)
-        # hacia TaskExecutor, el cual espera una lista de Action y no
-        # sabe interpretar un dict de regla de memoria.
-        #
-        # Ejemplo: "mi proyecto es SIRLUCAS" → auto-guardado en memory.json
-
         project_save_result = self._handle_project_action(data)
 
         if project_save_result is not None:
-
             if project_save_result.success:
-                logger.info(
-                    f"[ConversationManager] Proyecto auto-guardado: {project_save_result.message}"
-                )
-
+                logger.info(f"[ConversationManager] Proyecto auto-guardado: {project_save_result.message}")
             response = project_save_result
+            
+            # Si resolvió por acción, mapeamos vacíos para la estructura
+            brain_context_dict = {}
+            memory_hits = []
 
         else:
+            # ==================================================
+            # 3. BRAIN MANAGER: Análisis, Planificación y Recuperación
+            # ==================================================
+            # Reemplaza a `self._consult_memory()`. BrainManager decide 
+            # de forma inteligente qué fuentes tocar.
+            
+            brain_ctx = self.brain_manager.process(
+                message=message,
+                conversation_history=context_snapshot,
+                parsed_intent=data
+            )
+            
+            brain_context_dict = brain_ctx.to_dict()
+            memory_hits = brain_context_dict.get("memory_data", [])
 
             # ==================================================
-            # 4. Resolver respuesta (flujo normal, sin proyecto)
+            # 4. Resolver respuesta normal
             # ==================================================
-
             response = self._resolve_response(
-                message,
-                context_snapshot,
-                memory_hits,
-                data
+                message=message,
+                context=context_snapshot,
+                memory_hits=memory_hits,
+                raw_data=data,
+                brain_context=brain_context_dict # NUEVO: Pasamos toda la estructura
             )
 
-        # ==================================================
         # 5. Persistir contexto y memoria del turno
-        # ==================================================
+        self._persist_context(message, response)
+        self._persist_memory(message, response)
 
-        self._persist_context(
-            message,
-            response
-        )
-
-        self._persist_memory(
-            message,
-            response
-        )
-
-        # ==================================================
-        # OPCIÓN B - GUARDADO DIFERIDO
-        # ==================================================
-        #
-        # Todas las operaciones de MemoryManager realizadas
-        # durante este turno únicamente marcaron `_dirty`.
-        #
-        # Aquí se realiza UN SOLO guardado físico al finalizar
-        # el turno, evitando que remember/update/forget/etc.
-        # escriban individualmente en memory.json.
-        #
-        # ==================================================
-
+        # 6. Guardado Diferido
         save = getattr(self.memory, "save", None)
-
         if callable(save):
             save()
-
-        # ==================================================
-        # Resultado final
-        # ==================================================
 
         return ActionResult(
             success=True,
@@ -290,519 +190,93 @@ class ConversationManager:
                 "response": response,
                 "context": context_snapshot,
                 "memory": memory_hits,
+                "brain_context": brain_context_dict # Exponemos la decisión del cerebro
             },
         )
-
-    # ==================================================
-    # Compatibilidad hacia atrás
-    # ==================================================
 
     def talk(self, data: dict) -> ActionResult:
-        """
-        Se conserva por compatibilidad con integraciones existentes
-        que ya llaman a talk().
-        """
-
-        topic = data.get("topic")
-
-        if topic is None:
-            return ActionResult(
-                success=False,
-                status=ActionStatus.ERROR,
-                module="conversation",
-                command="talk",
-                message="No especificaste un tema.",
-                error="Campo 'topic' vacío.",
-            )
-
-        response = self._consult_knowledge(
-            topic,
-            context=None
-        )
-
-        if response is None:
-            return ActionResult(
-                success=False,
-                status=ActionStatus.WARNING,
-                module="conversation",
-                command="talk",
-                message="No tengo una respuesta para eso.",
-                error=(
-                    "No se encontró conocimiento "
-                    "para el tema especificado."
-                ),
-            )
-
-        return ActionResult(
-            success=True,
-            status=ActionStatus.SUCCESS,
-            module="conversation",
-            command="talk",
-            message="Respuesta obtenida.",
-            data={
-                "response": response
-            },
-        )
-
-    # ==================================================
-    # Helpers privados de orquestación
-    # ==================================================
+        # ... (Mantienes tu código intacto por compatibilidad) ...
+        pass
 
     def _get_context_snapshot(self) -> dict:
-        """
-        Delega en ContextManager.
-        """
+        # ... (Mantienes tu código intacto) ...
+        pass
 
-        for method_name in (
-            "get_context",
-            "snapshot",
-            "get",
-        ):
-
-            method = getattr(
-                self.context,
-                method_name,
-                None
-            )
-
-            if callable(method):
-
-                try:
-                    return method() or {}
-
-                except TypeError:
-                    continue
-
-        return (
-            self._fallback_execute(
-                self.context,
-                "get_context",
-                {}
-            )
-            or {}
-        )
+    def _persist_context(self, message: str, response: Any) -> None:
+        # ... (Mantienes tu código intacto) ...
+        pass
 
     # ==================================================
-
-    def _persist_context(
-        self,
-        message: str,
-        response: Any
-    ) -> None:
-
-        """
-        Delega en ContextManager.
-        """
-
-        payload = {
-            "message": message,
-            "response": response,
-        }
-
-        for method_name in (
-            "update",
-            "push",
-            "append",
-        ):
-
-            method = getattr(
-                self.context,
-                method_name,
-                None
-            )
-
-            if callable(method):
-
-                try:
-                    method(payload)
-                    return
-
-                except TypeError:
-                    continue
-
-        self._fallback_execute(
-            self.context,
-            "update",
-            payload
-        )
-
+    # NOTA: _consult_memory() ya no se usa directamente en process() 
+    # porque BrainManager lo absorbió. Puedes eliminarlo o dejarlo
+    # por si lo llamas desde otro lado.
     # ==================================================
 
-    def _consult_memory(
-        self,
-        message: str,
-        context: dict
-    ) -> Any:
-
-        """
-        Delega en MemoryManager.consult().
-        """
-
-        consult = getattr(
-            self.memory,
-            "consult",
-            None
-        )
-
-        if callable(consult):
-
-            result = consult(
-                message,
-                context
-            )
-
-            return getattr(
-                result,
-                "data",
-                result
-            )
-
-        return self._fallback_execute(
-            self.memory,
-            "consult",
-            {
-                "text": message,
-                "context": context,
-            }
-        )
-
-    # ==================================================
-
-    def _persist_memory(
-        self,
-        message: str,
-        response: Any
-    ) -> None:
-
-        """
-        Delega en MemoryManager.remember_turn().
-        """
-
-        remember_turn = getattr(
-            self.memory,
-            "remember_turn",
-            None
-        )
-
-        if callable(remember_turn):
-
-            remember_turn(
-                {
-                    "message": message,
-                    "response": response,
-                }
-            )
-
-            return
-
-        self._fallback_execute(
-            self.memory,
-            "remember_turn",
-            {
-                "message": message,
-                "response": response,
-            }
-        )
-
-    # ==================================================
+    def _persist_memory(self, message: str, response: Any) -> None:
+        # ... (Mantienes tu código intacto) ...
+        pass
 
     def _handle_project_action(self, rule_result: dict) -> ActionResult | None:
-        """
-        Si el resultado de Parser/RuleEngine corresponde a una acción de
-        proyecto (module == "memory" y command en PROJECT_MEMORY_COMMANDS),
-        la delega en ProjectMemoryHandler, que a su vez persiste el
-        proyecto vía MemoryManager.
+        # ... (Mantienes tu código intacto) ...
+        pass
 
-        Reemplaza la responsabilidad que antes tenía
-        ProjectMemoryIntegration, sin volver a ejecutar un RuleEngine
-        duplicado: se reutiliza el resultado que Parser ya produjo para
-        este mismo mensaje.
+    def _consult_knowledge(self, query: str, context: dict | None) -> Any:
+        # ... (Mantienes tu código intacto) ...
+        pass
 
-        Devuelve None si el mensaje no correspondía a una acción de
-        proyecto (para que process() siga el flujo normal).
-        """
-
-        if not isinstance(rule_result, dict):
-            return None
-
-        if rule_result.get("module") != "memory":
-            return None
-
-        if rule_result.get("command") not in self.PROJECT_MEMORY_COMMANDS:
-            return None
-
-        return self.project_memory_handler.handle_rule(rule_result)
-
-    # ==================================================
-
-    def _consult_knowledge(
-        self,
-        query: str,
-        context: dict | None
-    ) -> Any:
-
-        """
-        Delega en KnowledgeManager.
-        """
-
-        for method_name in (
-            "answer",
-            "find",
-            "lookup",
-            "query",
-        ):
-
-            method = getattr(
-                self.knowledge,
-                method_name,
-                None
-            )
-
-            if callable(method):
-
-                try:
-
-                    if context is not None:
-                        return method(
-                            query,
-                            context
-                        )
-
-                    return method(query)
-
-                except TypeError:
-
-                    try:
-                        return method(query)
-
-                    except TypeError:
-                        continue
-
-        return self._fallback_execute(
-            self.knowledge,
-            "answer",
-            {
-                "query": query,
-                "context": context,
-            }
-        )
-
-    # ==================================================
-
-    def _run_task(
-        self,
-        data: dict
-    ) -> Any:
-
-        """
-        Delega en TaskExecutor.
-        """
-
-        if self.task_executor is None:
-
-            logger.warning(
-                "[ConversationManager] "
-                "Sin TaskExecutor inyectado: "
-                "no se ejecuta la tarea."
-            )
-
-            return ActionResult(
-                success=False,
-                status=ActionStatus.ERROR,
-                module="conversation",
-                command="process",
-                message=(
-                    "No se puede ejecutar la tarea: "
-                    "TaskExecutor no disponible."
-                ),
-                error="TaskExecutor no disponible.",
-            )
-
-        for method_name in (
-            "run",
-            "execute",
-            "dispatch",
-        ):
-
-            method = getattr(
-                self.task_executor,
-                method_name,
-                None
-            )
-
-            if callable(method):
-
-                try:
-                    return method(data)
-
-                except TypeError:
-                    continue
-
-        return None
-
-    # ==================================================
-    # Resolver respuesta
-    # ==================================================
+    def _run_task(self, data: dict) -> Any:
+        # ... (Mantienes tu código intacto) ...
+        pass
 
     def _resolve_response(
         self,
         message: str,
         context: dict,
         memory_hits: Any,
-        raw_data: dict
+        raw_data: dict,
+        brain_context: dict = None # NUEVO ARGUMENTO
     ) -> Any:
 
-        intent_tag = (
-            raw_data.get("rule")
-            or raw_data.get("tag")
-        )
+        intent_tag = raw_data.get("rule") or raw_data.get("tag")
 
-        # ==================================================
-        # Buscar en responses.json
-        # ==================================================
-
-        if (
-            hasattr(self, "responses")
-            and intent_tag in self.responses
-        ):
-
-            return random.choice(
-                self.responses[intent_tag]
-            )
-
-        # ==================================================
-        # Buscar en intents.json
-        # ==================================================
+        if hasattr(self, "responses") and intent_tag in self.responses:
+            return random.choice(self.responses[intent_tag])
 
         if hasattr(self, "intents"):
-
-            for intent in self.intents.get(
-                "intents",
-                []
-            ):
-
+            for intent in self.intents.get("intents", []):
                 if intent["tag"] == intent_tag:
-
-                    return random.choice(
-                        intent["responses"]
-                    )
-
-        # ==================================================
-        # Si hay comando/tarea explícito
-        # ==================================================
+                    return random.choice(intent["responses"])
 
         if raw_data.get("command"):
-
-            # ==================================================
-            # SystemManager
-            # ==================================================
-
             if raw_data.get("module") == "system":
-
                 from app.service.system_manager import SystemManager
-
                 system_manager = SystemManager()
-
-                return system_manager.execute(
-                    raw_data
-                )
-
-            # ==================================================
-            # TaskExecutor
-            # ==================================================
+                
+                # Puedes inyectar el brain_context aquí si SystemManager lo soporta
+                return system_manager.execute(raw_data)
 
             else:
-
+                # ==================================================
+                # INYECCIÓN DEL BRAIN CONTEXT HACIA EL TASK EXECUTOR
+                # ==================================================
                 task_payload = {
                     **raw_data,
                     "context": context,
                     "memory": memory_hits,
+                    "brain_context": brain_context or {} # TaskExecutor (y luego Ollama) recibe TODO ordenado
                 }
+                return self._run_task(task_payload)
 
-                return self._run_task(
-                    task_payload
-                )
-
-        # ==================================================
-        # Fallback: KnowledgeManager
-        # ==================================================
-
+        # Fallback
         return self._consult_knowledge(
             message,
             {
                 "context": context,
                 "memory": memory_hits,
+                "brain_context": brain_context
             }
         )
 
-    # ==================================================
-    # Fallback dispatcher
-    # ==================================================
-
-    def _fallback_execute(
-        self,
-        target: Any,
-        command: str,
-        data: dict
-    ) -> Any:
-
-        """
-        Último recurso: si el sub-manager no expone
-        el método esperado por nombre, se intenta
-        su dispatcher uniforme execute().
-        """
-
-        execute = getattr(
-            target,
-            "execute",
-            None
-        )
-
-        if not callable(execute):
-
-            return ActionResult(
-                success=False,
-                status=ActionStatus.ERROR,
-                module="conversation",
-                command="process",
-                message=(
-                    "No se puede ejecutar la tarea: "
-                    "TaskExecutor no disponible."
-                ),
-                error="TaskExecutor no disponible.",
-            )
-
-        try:
-
-            result = execute(
-                {
-                    "command": command,
-                    **data
-                }
-                if isinstance(data, dict)
-                else {
-                    "command": command
-                }
-            )
-
-            return ActionResult(
-                success=True,
-                status=ActionStatus.SUCCESS,
-                module="conversation",
-                command="process",
-                message="Tarea ejecutada correctamente.",
-                data={
-                    "result": result
-                }
-            )
-
-        except Exception:
-
-            return ActionResult(
-                success=False,
-                status=ActionStatus.ERROR,
-                module="conversation",
-                command="process",
-                message="Error al ejecutar la tarea.",
-                error="Error inesperado al ejecutar la tarea.",
-            )
+    def _fallback_execute(self, target: Any, command: str, data: dict) -> Any:
+        # ... (Mantienes tu código intacto) ...
+        pass

@@ -712,5 +712,18 @@
       "^qué hice$"
     ],
     "command": "history"
-  }
+  },
+  {
+    "name": "crear_documento_con_ia",
+    "module": "document",
+    "priority": 5,
+    "regex": [
+        "^crea un documento llamado (.+) y escribe (.+)$",
+        "^crea un documento (.+) sobre (.+)$",
+        "^crea un archivo llamado (.+) y escribe (.+)$"
+    ],
+    "command": "create_with_ai",
+    "document_name_group": 1,
+    "instruction_group": 2
+}
 ]

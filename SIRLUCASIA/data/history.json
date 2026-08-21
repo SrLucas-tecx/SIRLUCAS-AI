@@ -1,10 +1,17 @@
 [
     {
-        "id": "3ef94e18-151e-4b61-bd87-f459be6d9a97",
-        "timestamp": "2026-08-17T13:06:20.658724",
-        "module": "memory",
-        "command": "recall",
-        "topic": null,
+        "id": "99d90906-d050-40c2-88d9-22ca12880bcb",
+        "timestamp": "2026-08-21T11:52:31.162262",
+        "module": "conversation",
+        "command": "unknown",
+        "topic": {
+            "rule": "unknown",
+            "module": "conversation",
+            "command": "unknown",
+            "topic": "enable_voice=true",
+            "raw_message": "enable_voice=True",
+            "normalized": "enable_voice=true"
+        },
         "status": null,
         "result": null,
         "duration": null,
